@@ -11,9 +11,6 @@ with open('README.rst', 'r') as f:
 with open('treble/version.py', 'r') as f:
     exec(f.read())
 
-packages=setuptools.find_namespace_packages(where='.')
-print(packages)
-
 setuptools.setup(
     name='treble',
     version=__version__,

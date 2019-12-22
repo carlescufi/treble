@@ -8,18 +8,18 @@ log = logging.getLogger('treble.h4')
 
 class H4(HCITransport):
 
-   # Packet indicators
-   IND_CMD = 0x1
-   IND_ACL = 0x2
-   IND_SCO = 0x3
-   IND_EVT = 0x4
+    # Packet indicators
+    IND_CMD = 0x1
+    IND_ACL = 0x2
+    IND_SCO = 0x3
+    IND_EVT = 0x4
 
-   def __init__(self):
-       super().__init__(HCI_TRANSPORT_H4)
+    def __init__(self):
+        super().__init__(HCI_TRANSPORT_H4)
 
-   def open(self, dev, **kwargs):
+    def open(self, dev, **kwargs):
         if not kwargs.get('baudrate'):
-	    raise RuntimeError('missing baudrate')
+            raise RuntimeError('missing baudrate')
         # Spec-mandated values
         kwargs['bytesize'] = 8
         kwargs['parity'] = 'N'
@@ -32,11 +32,11 @@ class H4(HCITransport):
                  .format(dev, kwargs))
         ser = serial.Serial(dev, **kwargs)
 
-   def close(self):
-   	pass
+    def close(self):
+        pass
 
-   def send(self):
-   	print('h4 send')
+    def send(self, packet):
+        log.debug('h4 send')
 
-   def recv(self):
-   	print('h4 recv')
+    def recv(self):
+        log.debug('h4 recv')

@@ -18,4 +18,3 @@ class HCI:
 
     def send():
         print('send hci')
-

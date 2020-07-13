@@ -3,8 +3,32 @@
 import logging
 import threading
 import asyncio
+import struct
 import time
 import sys
+import dataclasses
+import typing
+
+@dataclasses.dataclass
+class DCParent:
+    ocf = 0x1234
+    name: str = 'defstr'
+
+    def talk(self):
+        print(f'Parent: {self.name}')
+
+@dataclasses.dataclass
+class DCChild(DCParent):
+    pbf = 0x3
+    age: int = 0
+
+    def talk(self):
+        print(f'Child: {self.name}:{self.age}')
+
+
+class NTTest(typing.NamedTuple):
+    name: str
+    age: int
 
 
 async def say_after(delay, what):
@@ -42,8 +66,42 @@ def log_sb():
     #        ' %(levelname)s - %(message)s', datefmt='%H:%M:%S')
     #logging.debug(f"debug test: {sys.argv[0]}")
 
+def dc_sb():
+    p = DCParent('abc')
+    c = DCChild('def', 3)
+    c2 = DCChild(age=7, name='c2')
+
+    p.talk()
+    c.talk()
+    c2.talk()
+
+    print(dataclasses.fields(c))
+    print(dataclasses.asdict(c))
+    print(dataclasses.astuple(c))
+
+def nt_sb():
+    n = NTTest('abc', 12)
+    # setting it fails
+    # n.name = 'def'
+    print(n)
+
+
+class NTClass(typing.NamedTuple):
+    ocf = 0x000C
+    sig = '<BB'
+    le_scan_enable: int = 0
+    filter_dups: int = 0
+
+def nt_struct():
+    i = NTClass(le_scan_enable=3, filter_dups=4)
+    print(i)
+    print(f'{i.ocf}, {i.sig}')
+
 def main():
-    log_sb()
+    nt_struct()
+    #nt_sb()
+    #dc_sb()
+    #log_sb()
     #asyncio.run(aio_sb())
 
 if __name__ == '__main__':

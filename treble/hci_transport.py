@@ -1,16 +1,17 @@
+import asyncio
 from abc import ABC, abstractmethod
 
-HCI_TRANSPORT_H4 = 'h4'
+HCI_TRANSPORT_UART = 'uart'
 
 class HCITransport(ABC):
     '''Abstract superclass for an HCI transport.'''
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         '''HCI transport initialization.'''
         self.name = name
 
     @abstractmethod
-    def open(self, dev, **kwargs):
+    def open(self, dev: str, **kwargs):
     	'''Open transport.'''
 
     @abstractmethod
@@ -18,12 +19,12 @@ class HCITransport(ABC):
     	'''Close transport.'''
 
     @abstractmethod
-    def send(self):
+    async def send(self, data: bytearray) -> None:
     	'''Send data, blocking.'''
 
     @abstractmethod
-    def recv(self):
+    async def recv(self, timeout: int) -> Optional[bytearray]:
     	'''Receive data, blocking.'''
 
     def repr():
-        return '{}: {}'.format(self.__class__, self.name)
+        return f'{self.__class__}, {self.name}'

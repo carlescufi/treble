@@ -13,6 +13,7 @@ class H4(HCITransport):
     INIT_BAUDRATE = 9600
 
     # Packet indicators
+    IND_NONE = 0x0
     IND_CMD = 0x1
     IND_ACL = 0x2
     IND_SCO = 0x3
@@ -46,8 +47,12 @@ class H4(HCITransport):
         # Drain UART
         self._serial.reset_input_buffer()
         self._open = True
+        # Init RX states
+        self._rx_state = IND_NONE
         self._rx_pkt = None
-        self._rx_bytes = bytearray()
+        self._rx_remain = 0
+        self._rx_hdr = False
+
         self._loop = asyncio.get_event_loop()
         self._tx_lock = asyncio.Lock(loop=self._loop)
 
@@ -76,32 +81,52 @@ class H4(HCITransport):
     async def recv(self, timeout: int) -> Optional[bytes]:
         pass
 
-    async def _rx_enq(self, pkt: HCIPacket)
+    async def _rx_enq(self, pkt: HCIPacket) -> None:
         pass
 
     def _rx(self, data: bytes) -> None:
+        idx : int = 0
+        len : int = len(data)
         # Use += to ensure in-place concatenation without creating a new object
         # This should be faster than extend()
-        self._rx_bytes += data
-        while(len(data)):
-            if not self._rx_pkt:
-                ind = self._rx_bytes.pop(0)
-                pkt = HCIPacket()
+        #self._rx_bytes += data
+        while(len):
 
-                if ind == IND_CMD:
-                    pkt.type = HCICmd
-                elif ind == IND_ACL:
-                elif ind == IND_SCO:
+            # copy as much as available
+            if self._rx_remain:
+                clen = min(self._rx_remain, len)
+                self._rx_pkt.data += data[idx:idx + clen]
+                idx += clen
+                self._rx_remain -= clen
+                len -= clen
+                if self._rx_remain:
+                    # More bytes required
+                    return
+
+            if self._rx_state == IND_NONE:
+                ind = data[0]
+                idx += 1
+                len -= 1
+                self._rx_state = ind
+                if ind == IND_ACL:
+                    self._rx_pkt = HCIACLPacket()
+                    self._rx_remain = 4
                 elif ind == IND_EVT:
+                    self._rx_pkt = HCIEvtPacket()
+                    self._rx_remain = 2
                 else:
                     self.close()
-                    raise RuntimeError(f'Invalid indicator {ind}')
-
-
-            #self._loop.call_soon_threadsafe(_rx_enq, pkt)
-
-        # return and wait for more octets from the UART
-                    
+                    raise RuntimeError(f'Unexpected or invalid indicator {ind}')
+            elif not self._rx_hdr:
+                # Header complete, parse it
+                self._rx_remain = self._rx_pkt.length
+                self._rx_hdr = True
+            else:
+                # Packet completed, dispatch it
+                self._loop.call_soon_threadsafe(_rx_enq, self._rx_pkt)
+                self._rx_pkt = None
+                self._rx_state = IND_NONE
+                self._rx_hdr = False
 
 
     def _rx_thread_fn(self) -> None:

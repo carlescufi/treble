@@ -10,9 +10,25 @@ import dataclasses
 import typing
 
 @dataclasses.dataclass
+class DCUncle:
+    ocf = 0x2222
+    type : str
+    dd : int
+ 
+    def __init__(self, type: str = None):
+        print(f'Uncle init')
+
+@dataclasses.dataclass
 class DCParent:
     ocf = 0x1234
     name: str = 'defstr'
+    data: bytearray = None
+
+    def __init__(self, name: str):
+        print(f'Parent init')
+
+    def __post_init__(self):
+        print(f'Parent post-init')
 
     def talk(self):
         print(f'Parent: {self.name}')
@@ -22,13 +38,15 @@ class DCChild(DCParent):
     pbf = 0x3
     age: int = 0
 
+    def __init__(self, name: str, age: int):
+        self.unc = DCUncle()
+        print(f'Child init')
+
+    def __post_init__(self):
+        print(f'Child post-init')
+
     def talk(self):
         print(f'Child: {self.name}:{self.age}')
-
-
-class NTTest(typing.NamedTuple):
-    name: str
-    age: int
 
 
 async def say_after(delay, what):
@@ -70,36 +88,72 @@ def dc_sb():
     p = DCParent('abc')
     c = DCChild('def', 3)
     c2 = DCChild(age=7, name='c2')
+    u = DCUncle()
 
     p.talk()
     c.talk()
     c2.talk()
 
-    print(dataclasses.fields(c))
+    print(type(DCParent))
+    print([i.name for i in dataclasses.fields(c)])
     print(dataclasses.asdict(c))
     print(dataclasses.astuple(c))
 
-def nt_sb():
-    n = NTTest('abc', 12)
-    # setting it fails
-    # n.name = 'def'
-    print(n)
+class NTTest(typing.NamedTuple):
+    ocf = 0x3333
+    name: str
+    age: int
 
 
 class NTClass(typing.NamedTuple):
     ocf = 0x000C
-    sig = '<BB'
+    sig = '<HH'
     le_scan_enable: int = 0
     filter_dups: int = 0
 
-def nt_struct():
-    i = NTClass(le_scan_enable=3, filter_dups=4)
+    def unpack(self):
+        print('NTClass unpack')
+
+def nt_sub(cls: typing.Type[typing.NamedTuple]):
+    #print(cls.ocf)
+    #print(inst)
+    #print(inst._fields)
+
+    b = bytes([1, 2, 3, 4])
+    t = struct.unpack(cls.sig, b)
+    print(t)
+    inst = cls(*t)
+    print(inst)
+    if inst.unpack:
+        inst.unpack()
+
+def nt_sub2(tup: typing.NamedTuple):
+    print(tuple(tup))
+    b = struct.pack(tup.sig, *tuple(tup))
+    bb = struct.pack(tup.sig, 12, 11)
+    print(b)
+    print(bb)
+
+def nt_sb():
+    #n = NTTest('abc', 12)
+    # setting it fails
+    # n.name = 'def'
+    #print(n)
+    #nt_sub(NTClass)
+
+    i = NTClass(12, 11)
     print(i)
-    print(f'{i.ocf}, {i.sig}')
+    print(i._fields)
+    nt_sub2(i)
+    
+
+    #i = NTClass(le_scan_enable=3, filter_dups=4)
+    #print(i)
+    #print(f'{i.ocf}, {i.sig}')
+    #print(i._fields)
 
 def main():
-    nt_struct()
-    #nt_sb()
+    nt_sb()
     #dc_sb()
     #log_sb()
     #asyncio.run(aio_sb())

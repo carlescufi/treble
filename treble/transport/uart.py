@@ -1,4 +1,5 @@
 
+import asyncio
 import logging
 import serial
 import Threading
@@ -22,7 +23,7 @@ class H4(HCITransport):
     def __init__(self):
         super().__init__(HCI_TRANSPORT_UART)
 
-    def open(self, dev, **kwargs) -> None:
+    def open(self, dev : str, **kwargs) -> None:
         self._baudrate = kwargs.get('baudrate')
         if not self._baudrate:
             raise RuntimeError('missing baudrate')
@@ -44,14 +45,13 @@ class H4(HCITransport):
         # Force a baudrate change, some onboard debuggers require seeing a
         # baudrate change in order to start hardware flow control
         self._serial.baudrate = self._baudrate
-        # Drain UART
-        self._serial.reset_input_buffer()
         self._open = True
         # Init RX states
         self._rx_state = IND_NONE
         self._rx_pkt = None
         self._rx_remain = 0
         self._rx_hdr = False
+        self._rx_q = asyncio.Queue()
 
         self._loop = asyncio.get_event_loop()
         self._tx_lock = asyncio.Lock(loop=self._loop)
@@ -79,10 +79,10 @@ class H4(HCITransport):
                 throw e
 
     async def recv(self, timeout: int) -> Optional[bytes]:
-        pass
+        return await self._rx_q.get()
 
-    async def _rx_enq(self, pkt: HCIPacket) -> None:
-        pass
+    def _rx_enq(self, pkt: HCIPacket) -> None:
+        self._rx_q.put_nowait(pkt)
 
     def _rx(self, data: bytes) -> None:
         idx : int = 0
@@ -132,6 +132,8 @@ class H4(HCITransport):
     def _rx_thread_fn(self) -> None:
         id = threading.current_thread()
         log.debug(f'rx thread started: {id}')
+        # Drain UART
+        self._serial.reset_input_buffer()
         while self._open and self._serial.is_open:
             try:
                 data = self._serial.read(max(1, self._serial.in_waiting))

@@ -1,35 +1,52 @@
+from dataclasses import dataclass
 import struct
 import typing
+from typing import NamedTuple
 
-class Fragment:
+@dataclass(init=False, eq=False)
+class Packet:
 
-    def __init__(self, data = None, sig = None, tup = None):
-        if data:
-            self.unpack(data)
-        else:
-            pass
+    data : bytearray = None
 
-        self.sig = None
-        self.tups = None
+    def __init__(self, data : bytes = None):
+        self.data = bytearray(data) if data else bytearray()
 
-    def unpack(self):
-        assert self.sig
-        for t in tups:
-            struct.unpack(sig, data)
+    def unpack(self, cls : Type[NamedTuple]) -> NamedTuple:
+        assert cls.sig
+        t = struct.unpack(cls.sig, self.data)
+        return cls(*t)
 
-    def pack(self):
-        pass
-        #struct.pack(sig, ...)
+    def pack(self, tup : NamedTuple) -> None:
+        self.data[:0] = struct.pack(tup.sig, *tuple(tup))
 
-class HCICmdHdr(typing.NamedTuple):
+class HCICmdHdr(NamedTuple):
     sig = '<HB'
     opcode : int
     plen : int
 
-    #def __init__(self, plen):
-    #    pass
+class HCIEvtHdr(NamedTuple):
+    sig = '<BB'
+    code : int
+    plen : int
 
-class HCICmd(Fragment):
+class HCIACLHdr(NamedTuple):
+    sig = '<HH'
+    handle : int
+    dlen : int
+
+@dataclass(init=False, eq=False)
+class HCIACLData(Packet):
+
+    hci_hdr : HCIACLHdr = None
+
+    def __init__(self, data = None):
+        super().__init__(data)
+
+class HCIEvt(Packet):
+    
+    header : HCIEvtHdr = None
+
+class HCICmd(Packet):
 
     def __init__(self, params):
         super().__init__()

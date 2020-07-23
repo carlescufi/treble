@@ -1,5 +1,6 @@
 import asyncio
 from abc import ABC, abstractmethod
+from typing import Optional
 
 HCI_TRANSPORT_UART = 'uart'
 

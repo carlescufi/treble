@@ -2,13 +2,15 @@
 import asyncio
 import logging
 import serial
-import Threading
+import threading
+from typing import Optional
 
 from .hci_transport import HCITransport, HCI_TRANSPORT_UART
+from treble.packet import Packet, HCIACLData, HCIEvt
 
 log = logging.getLogger('treble.transport.uart')
 
-class H4(HCITransport):
+class UART(HCITransport):
 
     # Initial baudrate
     INIT_BAUDRATE = 9600
@@ -72,16 +74,16 @@ class H4(HCITransport):
             try:
                 written = await self._loop.run_in_executor(None,
                                                            self._serial.write,
-                                                           txd)) 
-                assert(written == 1) 
+                                                           txd) 
+                #assert(written == 1) 
             except serial.SerialException as e:
                 log.error(f'rx exception: {e}')
-                throw e
+                raise e
 
     async def recv(self, timeout: int) -> Optional[bytes]:
         return await self._rx_q.get()
 
-    def _rx_enq(self, pkt: HCIPacket) -> None:
+    def _rx_enq(self, pkt: Packet) -> None:
         self._rx_q.put_nowait(pkt)
 
     def _rx(self, data: bytes) -> None:
@@ -109,17 +111,21 @@ class H4(HCITransport):
                 len -= 1
                 self._rx_state = ind
                 if ind == IND_ACL:
-                    self._rx_pkt = HCIACLPacket()
+                    self._rx_pkt = HCIACLData()
                     self._rx_remain = 4
                 elif ind == IND_EVT:
-                    self._rx_pkt = HCIEvtPacket()
+                    self._rx_pkt = HCIEvt()
                     self._rx_remain = 2
                 else:
                     self.close()
                     raise RuntimeError(f'Unexpected or invalid indicator {ind}')
             elif not self._rx_hdr:
                 # Header complete, parse it
-                self._rx_remain = self._rx_pkt.length
+                self._rx_pkt.unpack_header()
+                if self.rx_state == IND_ACL:
+                    self._rx_remain = self._rx_pkt.hdr.dlen
+                else:
+                    self._rx_remain = self._rx_pkt.hdr.plen
                 self._rx_hdr = True
             else:
                 # Packet completed, dispatch it

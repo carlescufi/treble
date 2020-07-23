@@ -1,8 +1,8 @@
 
 import logging
 
-from .hci_transport import HCITransport, HCI_TRANSPORT_H4
-from .h4 import H4
+from .transport.hci_transport import HCITransport, HCI_TRANSPORT_UART
+from .transport.uart import UART
 
 log = logging.getLogger('treble.hci')
 

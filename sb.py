@@ -59,6 +59,8 @@ async def say_after(delay, what):
     await asyncio.sleep(delay)
     print(f'cv3: {cv.get()}')
     print(what)
+    print(f'say_after complete: thread:{threading.current_thread()}'
+          f' loop:{id(asyncio.get_running_loop())}')
 
 async def mycoro():
     print(f'cv5: {cv.get()}')
@@ -67,7 +69,9 @@ async def mycoro():
 async def aio_sb():
     print(f'cv1: {cv.get()}')
     cv.set('aio_sb')
+    print(f"before task1 {time.strftime('%X')} on {threading.current_thread()}")
     task1 = asyncio.create_task(say_after(1, 'hello')) 
+    print(f"before task2 {time.strftime('%X')} on {threading.current_thread()}")
     task2 = asyncio.create_task(say_after(3, 'world'))
     print(f'cv2: {cv.get()}')
 

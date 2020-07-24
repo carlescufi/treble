@@ -4,10 +4,8 @@ import logging
 import os
 import sys
 
-from .hci import HCI
+from .controller import Controller
 from .version import __version__
-
-from treble import hci
 
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession
@@ -24,16 +22,14 @@ style = Style.from_dict({
 })
 
 async def interactive_shell():
-    """
-    Like `interactive_shell`, but doing things manual.
-    """
     # Create Prompt.
     session = PromptSession(">> ")
 
     print('Treble {} (pid {})-- BLE Host. Type \'q\' to '
           'quit.\n'.format(__version__, os.getpid()))
-    #logging.basicConfig(level=logging.DEBUG)
-    #hci = HCI('h4', '/dev/ttyACM0',  baudrate=1000000)
+    logging.basicConfig(level=logging.DEBUG)
+    ctlr = Controller('uart', '/dev/ttyACM0',  baudrate=1000000)
+    ctlr._hci.send_cmd(None)
     #return 0
 
 
@@ -50,7 +46,6 @@ async def interactive_shell():
             return
 
 async def _main():
-    print('about to await')
     with patch_stdout():
         try:
             await interactive_shell()

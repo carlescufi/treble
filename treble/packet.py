@@ -18,8 +18,8 @@ class Packet:
     def unpack(self, cls : Type[NamedTuple]) -> NamedTuple:
         assert cls.sig
         s = struct.calcsize(cls.sig)
-        t = struct.unpack(cls.sig, self.data[idx : idx+s])
-        idx += s
+        t = struct.unpack(cls.sig, self.data[self.idx : self.idx + s])
+        self.idx += s
         return cls(*t)
 
     def pack(self, tup : NamedTuple) -> None:
@@ -48,7 +48,7 @@ class HCIACLData(Packet):
     def __init__(self, data = None):
         super().__init__(data)
 
-    def unpack_header():
+    def unpack_header(self):
             self.hdr = self.unpack(HCIACLHeader)
 
 class HCIEvt(Packet):
@@ -58,20 +58,24 @@ class HCIEvt(Packet):
     def __init__(self, data = None):
         super().__init__(data)
 
-    def unpack_header():
+    def unpack_header(self):
             self.hdr = self.unpack(HCIEvtHeader)
 
 class HCICmd(Packet):
 
-    def __init__(self, params):
+    def __init__(self, cls):
         super().__init__()
-        self.hdr = HCICmdHeader(0x1234, struct.calcsize(params.sig))
-        self.tup = (hdr, params)
-        self.hdr = HCICmdHeader()
-        pass
+        assert cls.ogf <= 0x3F
+        assert cls.ocf <= 0x3FF
+        self.opcode = (cls.ogf << 10) | cls.ocf
+        #plen = struct.calcsize(cls.sig) if cls.sig else 0 
+        plen = 0
+        self.hdr = HCICmdHeader(self.opcode, plen)
+        self.pack(self.hdr)
 
 class Reset(typing.NamedTuple):
-    ocf = 0x000C
+    ogf = 0x03
+    ocf = 0x003
 
 class LESetScanEnable(typing.NamedTuple):
     ocf = 0x000C

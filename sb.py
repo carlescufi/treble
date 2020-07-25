@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import contextvars
 import logging
 import threading
 import asyncio
@@ -8,6 +9,8 @@ import time
 import sys
 import dataclasses
 import typing
+
+cv = contextvars.ContextVar('var', default='def')
 
 @dataclasses.dataclass
 class DCUncle:
@@ -50,19 +53,31 @@ class DCChild(DCParent):
 
 
 async def say_after(delay, what):
+    cv.set('say_after')
     print(f'say_after: {delay} thread:{threading.current_thread()}'
           f' loop:{id(asyncio.get_running_loop())}')
     await asyncio.sleep(delay)
+    print(f'cv3: {cv.get()}')
     print(what)
 
+async def mycoro():
+    print(f'cv5: {cv.get()}')
+    await asyncio.sleep(1)
+
 async def aio_sb():
+    print(f'cv1: {cv.get()}')
+    cv.set('aio_sb')
     task1 = asyncio.create_task(say_after(1, 'hello')) 
     task2 = asyncio.create_task(say_after(3, 'world'))
+    print(f'cv2: {cv.get()}')
 
     print(f"started at {time.strftime('%X')} on {threading.current_thread()}")
     await task1
     await task2
     print(f"finished at {time.strftime('%X')} on {threading.current_thread()}")
+    print(f'cv4: {cv.get()}')
+    await mycoro()
+    print(f'cv6: {cv.get()}')
 
 def log_layer():
     logger = logging.getLogger('sb.layer')
@@ -153,10 +168,10 @@ def nt_sb():
     #print(i._fields)
 
 def main():
-    nt_sb()
+    #nt_sb()
     #dc_sb()
     #log_sb()
-    #asyncio.run(aio_sb())
+    asyncio.run(aio_sb())
 
 if __name__ == '__main__':
     main()

@@ -18,21 +18,34 @@ class HCI:
             raise RuntimeError('Unknown transport type {}'.name)
 
         # Start RX task
-        create_task(self._rx_task())
-        # Start TX task
-        self._tx_q = Queue()
-        create_task(self._tx_task())
+        self._rx_task = create_task(self._rx_task())
+        # Start TX command task
+        self._tx_cmd_q = Queue()
+        self._tx_cmd_task = create_task(self._tx_cmd_task())
 
     async def _rx_task(self):
         log.debug('rx task started')
         while True:
             pkt = await self._transport.recv()
-            log.debug(f'pkt rx: {pkt}')
-        
-    async def _tx_task(self):
-        log.debug('tx task started')
+            if isinstance(pkt, HCIEvt):
+                self._rx_evt(pkt)
+            elif instance(pkt, HCIACLData):
+                self._rx_acl(pkt)
+            else:
+                raise RuntimeError
+            
+ 
+    def _rx_evt(self, evt: HCIEvt):
+        log.debug(f'evt rx: {evt}')
+
+    def _rx_acl(self, acl: HCIACLData):
+        log.debug(f'acl rx: {evt}')
+
+    async def _tx_cmd_task(self):
+        log.debug('tx cmd task started')
         while True:
-            pkt = await self._tx_q.get()
+            #await self._tx_cmd_sem
+            pkt = await self._tx_cmd_q.get()
             log.debug('pkt tx: {pkt}')
             await self._transport.send(pkt)
 

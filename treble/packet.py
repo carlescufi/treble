@@ -25,6 +25,9 @@ class Packet:
     def pack(self, tup : NamedTuple) -> None:
         self.data[:0] = struct.pack(tup.sig, *tuple(tup))
 
+    def unpack_header(self):
+        raise NotImplementedError
+
 class HCICmdHeader(NamedTuple):
     sig = '<HB'
     opcode : int
@@ -45,7 +48,7 @@ class HCIACLData(Packet):
 
     hdr : HCIACLHeader = None
 
-    def __init__(self, data = None):
+    def __init__(self, data : bytes = None):
         super().__init__(data)
 
     def unpack_header(self):
@@ -55,7 +58,7 @@ class HCIEvt(Packet):
     
     hdr : HCIEvtHeader = None
 
-    def __init__(self, data = None):
+    def __init__(self, data : bytes = None):
         super().__init__(data)
 
     def unpack_header(self):

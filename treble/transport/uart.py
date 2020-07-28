@@ -101,7 +101,7 @@ class UART(HCITransport):
         self._rx_q.put_nowait(pkt)
 
     def _rx(self, data: bytes) -> None:
-        log.debug(f'_rx: {data.hex("-")}')
+        log.debug(f'read: {data.hex("-")}')
         idx : int = 0
         dlen : int = len(data)
         # Use += to ensure in-place concatenation without creating a new object

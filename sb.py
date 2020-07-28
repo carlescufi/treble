@@ -54,24 +54,35 @@ class DCChild(DCParent):
 
 async def say_after(delay, what):
     cv.set('say_after')
-    print(f'say_after: {delay} thread:{threading.current_thread()}'
-          f' loop:{id(asyncio.get_running_loop())}')
+    print(f'say_after: {delay} thread:{threading.current_thread().native_id}'
+          f' loop:{id(asyncio.get_running_loop())}'
+          f' task {asyncio.current_task().get_name()}')
     await asyncio.sleep(delay)
     print(f'cv3: {cv.get()}')
     print(what)
-    print(f'say_after complete: thread:{threading.current_thread()}'
+    print(f'say_after complete: thread:{threading.current_thread().native_id}'
           f' loop:{id(asyncio.get_running_loop())}')
 
 async def mycoro():
     print(f'cv5: {cv.get()}')
     await asyncio.sleep(1)
 
+async def mycoro2():
+    print('entering mycoro2')
+    await asyncio.sleep(1)
+    print('exiting mycoro2')
+
 async def aio_sb():
+    print(f'aio_sb: task {asyncio.current_task().get_name()}')
+
+    done, pend = await asyncio.wait([say_after(1, "abc"), say_after(2, "ced")])
+    return
+
     print(f'cv1: {cv.get()}')
     cv.set('aio_sb')
-    print(f"before task1 {time.strftime('%X')} on {threading.current_thread()}")
+    print(f"before task1 {time.strftime('%X')} on {threading.current_thread().native_id}")
     task1 = asyncio.create_task(say_after(1, 'hello')) 
-    print(f"before task2 {time.strftime('%X')} on {threading.current_thread()}")
+    print(f"before task2 {time.strftime('%X')} on {threading.current_thread().native_id}")
     task2 = asyncio.create_task(say_after(3, 'world'))
     print(f'cv2: {cv.get()}')
 
@@ -80,8 +91,14 @@ async def aio_sb():
     await task2
     print(f"finished at {time.strftime('%X')} on {threading.current_thread()}")
     print(f'cv4: {cv.get()}')
-    await mycoro()
-    print(f'cv6: {cv.get()}')
+
+    #await mycoro()
+    #print(f'cv6: {cv.get()}')
+
+    #print(f'calling mycoro2')
+    #await mycoro2()
+    #print(f'called mycoro2')
+
 
 def log_layer():
     logger = logging.getLogger('sb.layer')

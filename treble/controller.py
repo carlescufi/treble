@@ -1,5 +1,5 @@
 import logging
-from . import hci
+from .hci import hci
 
 log = logging.getLogger('treble.controller')
 

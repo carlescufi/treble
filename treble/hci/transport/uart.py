@@ -5,8 +5,8 @@ import serial
 import threading
 from typing import Optional
 
-from .hci_transport import HCITransport, HCI_TRANSPORT_UART
-from ..packet import Packet, HCIACLData, HCICmd, HCIEvt
+from .transport import HCITransport, HCI_TRANSPORT_UART
+from ...packet import Packet, HCIACLData, HCICmd, HCIEvt
 
 log = logging.getLogger('treble.transport.uart')
 

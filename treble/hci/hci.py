@@ -1,9 +1,9 @@
 
 from asyncio import create_task, Queue
-from .packet import *
+from ..packet import *
 import logging
 
-from .transport.hci_transport import HCITransport, HCI_TRANSPORT_UART
+from .transport.transport import HCITransport, HCI_TRANSPORT_UART
 from .transport.uart import UART
 
 log = logging.getLogger('treble.hci')
@@ -51,4 +51,4 @@ class HCI:
 
     def send_cmd(self, pkt: HCICmd):
         pkt = HCICmd(Reset)
-        self._tx_q.put_nowait(pkt)
+        self._tx_cmd_q.put_nowait(pkt)

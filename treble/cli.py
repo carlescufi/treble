@@ -4,8 +4,12 @@ import logging
 import os
 import sys
 
-from .controller import Controller
-from .version import __version__
+#from treble.controller import Controller
+from treble.version import __version__
+#from treble.hci.cmd import Reset
+#from treble.packet import HCICmd
+
+import treble.controller
 
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession
@@ -26,10 +30,13 @@ async def interactive_shell():
     session = PromptSession(">> ")
 
     print('Treble {} (pid {})-- BLE Host. Type \'q\' to '
-          'quit.\n'.format(__version__, os.getpid()))
+          'quit.\n'.format(treble.version.__version__, os.getpid()))
     logging.basicConfig(level=logging.DEBUG)
-    ctlr = Controller('uart', '/dev/ttyACM0',  baudrate=1000000)
-    ctlr._hci.send_cmd(None)
+    ctlr = treble.controller.Controller('uart', '/dev/ttyACM0',  baudrate=1000000)
+
+    pkt = treble.packet.HCICmd(Reset)
+    #pkt = treble.packet.HCICmd()
+    ctlr._hci.send_cmd(pkt)
     #return 0
 
 

@@ -76,16 +76,6 @@ class HCICmd(Packet):
         self.hdr = HCICmdHeader(self.opcode, plen)
         self.pack(self.hdr)
 
-class Reset(typing.NamedTuple):
-    ogf = 0x03
-    ocf = 0x003
-
-class LESetScanEnable(typing.NamedTuple):
-    ocf = 0x000C
-    sig = '<BB'
-    le_scan_enable: int
-    filter_dups: int
-
 if __name__ == "__main__":
 
     sse = LESetScanEnable(1, 0)

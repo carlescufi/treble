@@ -50,5 +50,4 @@ class HCI:
             await self._transport.send(pkt)
 
     def send_cmd(self, pkt: HCICmd):
-        pkt = HCICmd(Reset)
         self._tx_cmd_q.put_nowait(pkt)

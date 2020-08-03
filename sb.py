@@ -147,8 +147,18 @@ class NTClass(typing.NamedTuple):
     le_scan_enable: int = 0
     filter_dups: int = 0
 
+    # This will fail
+    #def __init__(self):
+    #    pass
+
     def unpack(self):
         print('NTClass unpack')
+    
+    #def __repr__(self):
+    #    return "NTClass_repr"
+
+    def __str__(self):
+        return "NTClass_str"
 
 def nt_sub(cls: typing.Type[typing.NamedTuple]):
     #print(cls.ocf)
@@ -181,6 +191,7 @@ def nt_sb():
     print(i)
     print(i._fields)
     nt_sub2(i)
+    print(f'here is i: {i} and its repr: {repr(i)}')
     
 
     #i = NTClass(le_scan_enable=3, filter_dups=4)
@@ -189,10 +200,10 @@ def nt_sb():
     #print(i._fields)
 
 def main():
-    #nt_sb()
+    nt_sb()
     #dc_sb()
     #log_sb()
-    asyncio.run(aio_sb())
+    #asyncio.run(aio_sb())
 
 if __name__ == '__main__':
     main()

@@ -8,7 +8,7 @@ from .transport.uart import UART
 
 log = logging.getLogger('treble.hci')
 
-class HCI:
+class HCIHost:
 
     def __init__(self, name, dev, **kwargs):
         if (name == HCI_TRANSPORT_UART):

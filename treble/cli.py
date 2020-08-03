@@ -5,14 +5,14 @@ import os
 import sys
 
 #from treble.controller import Controller
-from .version import __version__
-from . import hci
+from treble.version import __version__
+from treble import hci
 
 #from treble.hci.cmd import Reset
 #from treble.packet import HCICmd
 
-from .controller import Controller
-from .packet import HCICmd
+from treble.controller import Controller
+from treble.packet import HCICmd
 
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession

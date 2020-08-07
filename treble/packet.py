@@ -1,3 +1,4 @@
+from asyncio import Event
 from dataclasses import dataclass
 import struct
 import typing
@@ -54,6 +55,7 @@ class HCIACLData(Packet):
     def unpack_header(self):
             self.hdr = self.unpack(HCIACLHeader)
 
+@dataclass(init=False, eq=False)
 class HCIEvt(Packet):
     
     hdr : HCIEvtHeader = None
@@ -75,8 +77,13 @@ class HCICmd(Packet):
         plen = 0
         self.hdr = HCICmdHeader(self.opcode, plen)
         self.pack(self.hdr)
+        self.event = Event()
 
-if __name__ == "__main__":
+    @property
+    def event(self):
+        return self._event
 
-    sse = LESetScanEnable(1, 0)
-    #cmd = HCICmd(sse)
+    @event.setter
+    def event(self, event):
+        self._event = event
+

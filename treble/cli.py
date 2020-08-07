@@ -39,7 +39,7 @@ async def interactive_shell():
 
     pkt = HCICmd(hci.cmd.Reset)
     #pkt = treble.packet.HCICmd()
-    ctlr._hci.send_cmd(pkt)
+    ctlr._hci.tx_cmd(pkt)
     #return 0
 
 

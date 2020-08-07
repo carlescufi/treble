@@ -1,5 +1,6 @@
 
-from asyncio import create_task, Queue
+from asyncio import create_task, Queue, Event, BoundedSemaphore, wait_for, \
+                    TimeoutError
 from ..packet import *
 from ..mon import Monitor
 import logging
@@ -24,6 +25,9 @@ class HCIHost:
         # Start TX command task
         self._tx_cmd_q = Queue()
         self._tx_cmd_task = create_task(self._tx_cmd_task())
+        # Bound to max 1, so we send only one command at a time
+        self._tx_cmd_sem = BoundedSemaphore(value=1)
+        self._curr_cmd = None
 
     async def _rx_task(self):
         log.debug('rx task started')
@@ -53,9 +57,18 @@ class HCIHost:
     async def _tx_cmd_task(self):
         log.debug('tx cmd task started')
         while True:
-            #await self._tx_cmd_sem
             pkt = await self._tx_cmd_q.get()
             log.debug(f'pkt tx: {pkt}')
+
+            # Wait for the current command to complete
+            try:
+                await wait_for(self._tx_cmd_sem.acquire(), 10)
+            except TimeoutError:
+                raise
+            
+            assert self._curr_cmd == None
+            self._curr_cmd = pkt
+
             try:
                 await self._transport.send(pkt)
             except Exception as e:
@@ -64,5 +77,14 @@ class HCIHost:
                 if self._mon:
                     self._mon.feed_tx(pkt)
 
-    def send_cmd(self, pkt: HCICmd):
+    def tx_cmd(self, pkt: HCICmd) -> None:
         self._tx_cmd_q.put_nowait(pkt)
+
+    async def send_cmd(self, pkt: HCICmd) -> HCIEvt:
+        pkt.event.clear()
+        self.tx_cmd(pkt)
+        try:
+            await wait_for(pkt.event.wait(), 15)
+        except TimeoutError:
+            raise
+

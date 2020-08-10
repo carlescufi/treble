@@ -1,5 +1,5 @@
 from asyncio import Event
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple
 import struct
 import typing
 from typing import Type, NamedTuple
@@ -17,11 +17,10 @@ class Packet:
         assert cls.sig
         s = struct.calcsize(cls.sig)
         t = struct.unpack(cls.sig, self.data[self.idx : self.idx + s])
-        self.idx += s
         return cls(*t)
 
     def pack(self, tup : NamedTuple) -> None:
-        self.data[:0] = struct.pack(tup.sig, *tuple(tup))
+        self.data[:0] = struct.pack(tup.sig, *astuple(tup))
 
     def header_len(self):
         raise NotImplementedError
@@ -32,17 +31,20 @@ class Packet:
     def payload_len(self):
         raise NotImplementedError
 
-class HCICmdHdr(NamedTuple):
+@dataclass
+class HCICmdHdr:
     sig = '<HB'
     opcode : int
     plen : int
 
-class HCIEvtHdr(NamedTuple):
+@dataclass
+class HCIEvtHdr:
     sig = '<BB'
     code : int
     plen : int
 
-class HCIACLHdr(NamedTuple):
+@dataclass
+class HCIACLHdr:
     sig = '<HH'
     handle : int
     dlen : int
@@ -59,7 +61,7 @@ class HCIACLData(Packet):
             self.hdr = self.unpack(HCIACLHdr)
     
     def payload_len(self):
-        return hdr.dlen
+        return self.hdr.dlen
 
 class HCIEvt(Packet):
     
@@ -73,7 +75,7 @@ class HCIEvt(Packet):
         self.hdr = self.unpack(HCIEvtHdr)
 
     def payload_len(self):
-        return hdr.plen
+        return self.hdr.plen
 
 class HCICmd(Packet):
 

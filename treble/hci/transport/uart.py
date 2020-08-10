@@ -159,6 +159,7 @@ class UART(HCITransport):
                 self._rx(data)
             except Exception as e:
                 log.error(f'rx exception: {e}')
+                raise
                 break
 
         log.debug(f'rx thread exited: {id}')

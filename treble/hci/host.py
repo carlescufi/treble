@@ -50,7 +50,6 @@ class HCIHost:
  
     def _rx_evt(self, evt: HCIEvt):
         # Unpack the event and find a handler
-        HCIEvent.
         log.debug(f'evt rx: {evt}')
 
     def _rx_acl(self, acl: HCIACLData):

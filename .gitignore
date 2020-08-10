@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+dist/
+sdist/
+eggs/
+.eggs/
+wheels/
+*.egg-info/
+*.egg

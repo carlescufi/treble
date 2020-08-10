@@ -104,14 +104,13 @@ class UART(HCITransport):
         log.debug(f'read: {data.hex("-")}')
         idx : int = 0
         dlen : int = len(data)
-        # Use += to ensure in-place concatenation without creating a new object
-        # This should be faster than extend()
-        #self._rx_bytes += data
         while(dlen):
 
             # copy as much as available
             if self._rx_remain:
                 clen = min(self._rx_remain, dlen)
+                # Use += to ensure in-place concatenation without creating a
+                # new object  This should be faster than extend()
                 self._rx_pkt.data += data[idx:idx + clen]
                 idx += clen
                 self._rx_remain -= clen
@@ -127,10 +126,10 @@ class UART(HCITransport):
                 self._rx_state = ind
                 if ind == UART.IND_ACL:
                     self._rx_pkt = HCIACLData()
-                    self._rx_remain = 4
+                    self._rx_remain = self._rx_pkt.header_len()
                 elif ind == UART.IND_EVT:
                     self._rx_pkt = HCIEvt()
-                    self._rx_remain = 2
+                    self._rx_remain = self._rx_pkt.header_len()
                 else:
                     self.close()
                     raise RuntimeError(f'Unexpected or invalid indicator {ind}')
@@ -138,9 +137,9 @@ class UART(HCITransport):
                 # Header complete, parse it
                 self._rx_pkt.unpack_header()
                 if self._rx_state == UART.IND_ACL:
-                    self._rx_remain = self._rx_pkt.hdr.dlen
+                    self._rx_remain = self._rx_pkt.payload_len()
                 else:
-                    self._rx_remain = self._rx_pkt.hdr.plen
+                    self._rx_remain = self._rx_pkt.payload_len()
                 self._rx_hdr = True
             else:
                 # Packet completed, dispatch it

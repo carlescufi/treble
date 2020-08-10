@@ -4,17 +4,14 @@ import struct
 import typing
 from typing import Type, NamedTuple
 
-@dataclass(init=False, eq=False)
 class Packet:
-
-    data : bytearray = None
-    idx : int = 0
 
     def __init__(self, data : bytes = None, copy=False):
         if data:
             self.data = bytearray(data) if copy else data
         else:
             self.data = bytearray()
+        self.idx = 0
 
     def unpack(self, cls : Type[NamedTuple]) -> NamedTuple:
         assert cls.sig
@@ -26,45 +23,57 @@ class Packet:
     def pack(self, tup : NamedTuple) -> None:
         self.data[:0] = struct.pack(tup.sig, *tuple(tup))
 
+    def header_len(self):
+        raise NotImplementedError
+
     def unpack_header(self):
         raise NotImplementedError
 
-class HCICmdHeader(NamedTuple):
+    def payload_len(self):
+        raise NotImplementedError
+
+class HCICmdHdr(NamedTuple):
     sig = '<HB'
     opcode : int
     plen : int
 
-class HCIEvtHeader(NamedTuple):
+class HCIEvtHdr(NamedTuple):
     sig = '<BB'
     code : int
     plen : int
 
-class HCIACLHeader(NamedTuple):
+class HCIACLHdr(NamedTuple):
     sig = '<HH'
     handle : int
     dlen : int
 
-@dataclass(init=False, eq=False)
 class HCIACLData(Packet):
 
-    hdr : HCIACLHeader = None
-
     def __init__(self, data : bytes = None):
         super().__init__(data)
 
-    def unpack_header(self):
-            self.hdr = self.unpack(HCIACLHeader)
+    def header_len(self):
+        return struct.calcsize(HCIACLHdr.sig)
 
-@dataclass(init=False, eq=False)
+    def unpack_header(self):
+            self.hdr = self.unpack(HCIACLHdr)
+    
+    def payload_len(self):
+        return hdr.dlen
+
 class HCIEvt(Packet):
     
-    hdr : HCIEvtHeader = None
-
     def __init__(self, data : bytes = None):
         super().__init__(data)
 
+    def header_len(self):
+        return struct.calcsize(HCIEvtHdr.sig)
+
     def unpack_header(self):
-            self.hdr = self.unpack(HCIEvtHeader)
+        self.hdr = self.unpack(HCIEvtHdr)
+
+    def payload_len(self):
+        return hdr.plen
 
 class HCICmd(Packet):
 
@@ -75,7 +84,7 @@ class HCICmd(Packet):
         self.opcode = (cls.ogf << 10) | cls.ocf
         #plen = struct.calcsize(cls.sig) if cls.sig else 0 
         plen = 0
-        self.hdr = HCICmdHeader(self.opcode, plen)
+        self.hdr = HCICmdHdr(self.opcode, plen)
         self.pack(self.hdr)
         self.event = Event()
 

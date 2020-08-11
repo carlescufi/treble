@@ -59,12 +59,12 @@ class HCIACLData(Packet):
 
     def unpack_header(self):
             self.hdr = self.unpack(HCIACLHdr)
-    
+
     def payload_len(self):
         return self.hdr.dlen
 
 class HCIEvt(Packet):
-    
+
     def __init__(self, data : bytes = None):
         super().__init__(data)
 
@@ -84,7 +84,7 @@ class HCICmd(Packet):
         assert cls.ogf <= 0x3F
         assert cls.ocf <= 0x3FF
         self.opcode = (cls.ogf << 10) | cls.ocf
-        #plen = struct.calcsize(cls.sig) if cls.sig else 0 
+        #plen = struct.calcsize(cls.sig) if cls.sig else 0
         plen = 0
         self.hdr = HCICmdHdr(self.opcode, plen)
         self.pack(self.hdr)

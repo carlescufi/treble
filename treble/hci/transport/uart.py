@@ -36,7 +36,7 @@ class UART(HCITransport):
         kwargs['bytesize'] = 8
         kwargs['parity'] = 'N'
         kwargs['stopbits'] = 1
-        kwargs['rtscts'] = True 
+        kwargs['rtscts'] = True
         # Wait forever in the rx thread
         kwargs['timeout'] = None
         kwargs['write_timeout'] = None
@@ -87,8 +87,8 @@ class UART(HCITransport):
             try:
                 written = await self._loop.run_in_executor(None,
                                                            self._serial.write,
-                                                           txd) 
-                #assert(written == 1) 
+                                                           txd)
+                #assert(written == 1)
             except serial.SerialException as e:
                 log.error(f'rx exception: {e}')
                 raise e

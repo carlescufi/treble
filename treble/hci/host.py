@@ -19,7 +19,7 @@ class HCIHost:
             self._transport.open(dev, **kwargs)
         else:
             raise RuntimeError('Unknown transport type {}'.name)
-        
+
         # Start RX task
         self._rx_task = create_task(self._rx_task())
         # Start TX command task
@@ -46,8 +46,8 @@ class HCIHost:
                 self._rx_acl(pkt)
             else:
                 log.error('Invalid rx type: {type(pkt)}')
-            
- 
+
+
     def _rx_evt(self, evt: HCIEvt):
         # Unpack the event and find a handler
         log.debug(f'evt rx: {evt}')
@@ -66,7 +66,7 @@ class HCIHost:
                 await wait_for(self._tx_cmd_sem.acquire(), 10)
             except TimeoutError:
                 raise
-            
+
             assert self._curr_cmd == None
             self._curr_cmd = pkt
 

@@ -1,4 +1,5 @@
-from typing import NamedTuple
+from dataclasses import dataclass
+import typing
 
 all = dict()
 def evt(cls):
@@ -6,6 +7,7 @@ def evt(cls):
     return cls
 
 @evt
+@dataclass(eq=False)
 class CommandComplete(NamedTuple):
     code = 0x0E
     sig = '<BH'
@@ -14,6 +16,7 @@ class CommandComplete(NamedTuple):
     cmd_opcode: int
 
 @evt
+@dataclass(eq=False)
 class CommandStatus(NamedTuple):
     code = 0x0F
     sig = '<BBH'

@@ -28,6 +28,8 @@ style = Style.from_dict({
     'scrollbar.button': 'bg:#222222',
 })
 
+log = logging.getLogger('treble.cli')
+
 async def interactive_shell():
     # Create Prompt.
     session = PromptSession(">> ")
@@ -39,7 +41,10 @@ async def interactive_shell():
 
     pkt = HCICmd(hci.cmd.Reset)
     #pkt = treble.packet.HCICmd()
-    ctlr._hci.tx_cmd(pkt)
+    for i in range(5):
+        log.debug('tx_cmd')
+        #ctlr._hci.tx_cmd(pkt)
+        await ctlr._hci.send_cmd(pkt)
     #return 0
 
 

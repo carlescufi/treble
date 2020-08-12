@@ -3,12 +3,12 @@ import typing
 
 all = dict()
 def evt(cls):
-    evts[cls.code] = cls
+    all[cls.code] = cls
     return cls
 
 @evt
 @dataclass(eq=False)
-class CommandComplete(NamedTuple):
+class CommandComplete:
     code = 0x0E
     sig = '<BH'
 
@@ -17,7 +17,7 @@ class CommandComplete(NamedTuple):
 
 @evt
 @dataclass(eq=False)
-class CommandStatus(NamedTuple):
+class CommandStatus:
     code = 0x0F
     sig = '<BBH'
 

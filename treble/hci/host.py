@@ -1,15 +1,33 @@
 
 from asyncio import create_task, Queue, Event, BoundedSemaphore, wait_for, \
                     TimeoutError
-from ..packet import *
-from ..mon import Monitor
+import inspect
 import logging
 
+from . import evt
+from ..packet import *
+from ..mon import Monitor
 from .transport.transport import HCITransport, HCI_TRANSPORT_UART
 from .transport.uart import UART
 
 log = logging.getLogger('treble.hci')
 
+ATTR_EVT_HANDLER = '_evt_handler'
+def handlers(cls):
+    cls.evt_handlers = dict()
+    for t in inspect.getmembers(cls, predicate=inspect.isfunction):
+        f = t[1]
+        if hasattr(f, ATTR_EVT_HANDLER):
+            cls.evt_handlers[getattr(f, ATTR_EVT_HANDLER)] = f
+    return cls
+
+def evt_handler(evt_cls):
+    def wrapper(fun):
+        setattr(fun, ATTR_EVT_HANDLER, evt_cls.code)
+        return fun
+    return wrapper
+
+@handlers
 class HCIHost:
 
     def __init__(self, name: str, dev: str, mon: Monitor=None, **kwargs):
@@ -47,10 +65,15 @@ class HCIHost:
             else:
                 log.error('Invalid rx type: {type(pkt)}')
 
-
     def _rx_evt(self, evt: HCIEvt):
-        # Unpack the event and find a handler
         log.debug(f'evt rx: {evt}')
+        # Look for a handler
+        try:
+            handler = self.evt_handlers[evt.hdr.code]
+        except KeyError:
+            log.warn(f'Discarding event with code: {evt.hdr.code}')
+        else:
+            handler(self, evt)
 
     def _rx_acl(self, acl: HCIACLData):
         log.debug(f'acl rx: {evt}')
@@ -69,6 +92,7 @@ class HCIHost:
 
             assert self._curr_cmd == None
             self._curr_cmd = pkt
+            log.debug(f'_tx_cmd curr set')
 
             try:
                 await self._transport.send(pkt)
@@ -88,4 +112,21 @@ class HCIHost:
             await wait_for(pkt.event.wait(), 15)
         except TimeoutError:
             raise
+
+    def _complete_cmd(self):
+        log.debug(f'complete: {self._curr_cmd}')
+        assert self._curr_cmd
+        # Wake up a potential task waiting on completion
+        self._curr_cmd.event.set()
+        self._curr_cmd = None
+
+        # The command itself is complete, allow the tx cmd task to move on to
+        # the next queued command
+        self._tx_cmd_sem.release()
+
+    @evt_handler(evt.CommandComplete)
+    def _evt_cc(self, evt: HCIEvt) -> None:
+        log.debug(f'handling CC: {evt}')
+
+        self._complete_cmd()
 

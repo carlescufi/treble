@@ -4,13 +4,13 @@ import typing
 
 cmds = dict()
 def cmd(ogf):
-    def wrap(cls):
+    def wrapper(cls):
         cls.ogf = ogf.value
         opcode = (cls.ogf << 10) | cls.ocf
         cls.opcode = opcode
         cmds[opcode] = cls
         return cls
-    return wrap
+    return wrapper
 
 class OGF(enum.Enum):
     LINK_CONTROL = 1

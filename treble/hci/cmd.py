@@ -30,12 +30,22 @@ class ReadLocalVersionInformation:
     ocf = 0x001
     @dataclass
     class ReturnParams:
-        sig = '<BHBHH'
+        sig = '<BBHBHH'
+        status: int
         hci_ver: int
         hci_rev: int
         lmp_pal_ver: int
         manu_name: int
         lmp_pal_subver: int
+
+@cmd(OGF.INFO_PARAMS)
+class ReadLocalSupportedCommands:
+    ocf = 0x001
+    @dataclass
+    class ReturnParams:
+        sig = '<B64s'
+        status: int
+        commands: bytes
 
 @cmd(OGF.LE_CTLR_CMDS)
 @dataclass(eq=False)

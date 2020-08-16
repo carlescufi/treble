@@ -46,8 +46,7 @@ class UART(HCITransport):
         try:
             self._serial = serial.Serial(dev, **kwargs)
         except serial.SerialException as e:
-            log.error(f'Unable to open serial port {dev}')
-            return
+            raise OSError(e.errno, e.strerror)
         # Force a baudrate change, some onboard debuggers require seeing a
         # baudrate change in order to start hardware flow control
         self._serial.baudrate = self._baudrate

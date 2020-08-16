@@ -34,9 +34,14 @@ class HCIHost:
         self._mon = mon
         if (name == HCI_TRANSPORT_UART):
             self._transport = UART()
-            self._transport.open(dev, **kwargs)
         else:
             raise RuntimeError('Unknown transport type {}'.name)
+
+        try:
+            self._transport.open(dev, **kwargs)
+        except OSError as e:
+            #log.error(f'Unable to open serial port {e}')
+            raise e
 
         # Start RX task
         self._rx_task = create_task(self._rx_task())

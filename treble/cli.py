@@ -30,14 +30,19 @@ style = Style.from_dict({
 
 log = logging.getLogger('treble.cli')
 
-async def interactive_shell():
-    # Create Prompt.
-    session = PromptSession(">> ")
+def die(msg: str):
+    print(msg)
+    sys.exit(1)
 
-    print('Treble {} (pid {})-- BLE Host. Type \'q\' to '
-          'quit.\n'.format(__version__, os.getpid()))
+async def init():
+
+    print(f'treble {__version__} (pid {os.getpid()}) -- BLE Host. Type \'q\' '
+          f'to quit.\n')
     logging.basicConfig(level=logging.DEBUG)
-    ctlr = Controller('uart', '/dev/ttyACM0',  baudrate=1000000)
+    try:
+        ctlr = Controller('uart', '/dev/ttyACM0',  baudrate=1000000)
+    except OSError as e:
+        die(e)
 
     pkt = HCICmd(hci.cmd.Reset)
     #pkt = treble.packet.HCICmd()
@@ -47,6 +52,11 @@ async def interactive_shell():
         await ctlr._hci.send_cmd(pkt)
     #return 0
 
+
+
+async def interactive_shell():
+    # Create Prompt.
+    session = PromptSession(">> ")
 
     # Run echo loop. Read text from stdin, and reply it back.
     while True:
@@ -61,6 +71,7 @@ async def interactive_shell():
             return
 
 async def _main():
+    await init()
     with patch_stdout():
         try:
             await interactive_shell()

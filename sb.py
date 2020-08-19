@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import abc
+import collections
 import contextvars
 import logging
 import threading
@@ -199,10 +201,37 @@ def nt_sb():
     #print(f'{i.ocf}, {i.sig}')
     #print(i._fields)
 
+class ABCParent(abc.ABC):
+
+    def __init__(self):
+        print('ABCParent init')
+
+    @classmethod
+    @abc.abstractmethod
+    def cm(cls):
+        '''cm'''
+
+class ABCChild(ABCParent):
+
+    def __init__(self):
+        print('ABCChild init')
+
+    @classmethod
+    def cm(cls):
+        print(f'cm: {cls}')
+
+
+def abc_sb():
+
+    abc = ABCParent()
+    abc = ABCChild()
+    ABCChild.cm()
+
 def main():
-    nt_sb()
+    #nt_sb()
     #dc_sb()
     #log_sb()
+    abc_sb()
     #asyncio.run(aio_sb())
 
 if __name__ == '__main__':

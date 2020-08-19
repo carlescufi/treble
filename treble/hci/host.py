@@ -31,14 +31,20 @@ def evt_handler(evt_cls):
 class HCIHost:
 
     def __init__(self, name: str, dev: str, mon: Monitor=None, **kwargs):
+        self._dev = dev
+        self._kwargs = kwargs
         self._mon = mon
         if (name == HCI_TRANSPORT_UART):
             self._transport = UART()
         else:
             raise RuntimeError('Unknown transport type {}'.name)
+        self._tx_cmd_q = Queue()
+        # Bound to max 1, so we send only one command at a time
+        self._tx_cmd_sem = BoundedSemaphore(value=1)
 
+    def open(self):
         try:
-            self._transport.open(dev, **kwargs)
+            self._transport.open(self._dev, **self._kwargs)
         except OSError as e:
             #log.error(f'Unable to open serial port {e}')
             raise e from None
@@ -46,15 +52,13 @@ class HCIHost:
         # Start RX task
         self._rx_task = create_task(self._rx_task())
         # Start TX command task
-        self._tx_cmd_q = Queue()
-        self._tx_cmd_task = create_task(self._tx_cmd_task())
-        # Bound to max 1, so we send only one command at a time
-        self._tx_cmd_sem = BoundedSemaphore(value=1)
         self._curr_cmd = None
+        self._tx_cmd_task = create_task(self._tx_cmd_task())
 
-    async def close():
+    async def close(self):
         await self._rx_task
         await self._tx_cmd_task
+        self._transport.close()
 
     async def _rx_task(self):
         log.debug('rx task started')

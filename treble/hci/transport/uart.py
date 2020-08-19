@@ -51,7 +51,7 @@ class UART(HCITransport):
         kwargs['write_timeout'] = None
         # Force baudrate to a slow, unusable one initially
         kwargs['baudrate'] = UART.INIT_BAUDRATE
-        log.info(f'opening serial port device {dev} with params {kwargs}')
+        log.info(f'opening serial port device {dev} at {self._baudrate} baud')
         try:
             self._serial = serial.Serial(dev, **kwargs)
         except serial.SerialException as e:

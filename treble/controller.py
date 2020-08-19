@@ -9,4 +9,10 @@ class Controller:
     def __init__(self, name, dev, **kwargs):
         self._mon = mon.Monitor()
         self._hci = hci.host.HCIHost(name, dev, self._mon, **kwargs)
+        self.open()
 
+    def open(self):
+        self._hci.open()
+
+    def close(self):
+        self._hci.close()

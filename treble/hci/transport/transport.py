@@ -12,11 +12,11 @@ class HCITransport(ABC):
         self.name = name
 
     @abstractmethod
-    def open(self, dev: str, **kwargs):
+    def open(self, dev: str, **kwargs) -> None:
     	'''Open transport.'''
 
     @abstractmethod
-    def close(self):
+    async def close(self):
     	'''Close transport.'''
 
     @abstractmethod

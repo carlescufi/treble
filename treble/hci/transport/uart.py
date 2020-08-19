@@ -1,5 +1,6 @@
 
 import asyncio
+import errno
 import logging
 import serial
 import threading
@@ -24,8 +25,16 @@ class UART(HCITransport):
 
     def __init__(self):
         super().__init__(HCI_TRANSPORT_UART)
+        self._open = False
+        self._closing = False
+        self._rx_q = asyncio.Queue()
+        self._loop = asyncio.get_event_loop()
+        self._tx_lock = asyncio.Lock(loop=self._loop)
 
     def open(self, dev : str, **kwargs) -> None:
+        if self._open or self._closing:
+            raise OSError(errno.EEXIST)
+
         self._baudrate = kwargs.get('baudrate')
         if not self._baudrate:
             raise RuntimeError('missing baudrate')
@@ -56,22 +65,23 @@ class UART(HCITransport):
         self._rx_pkt = None
         self._rx_remain = 0
         self._rx_hdr = False
-        self._rx_q = asyncio.Queue()
-
-        self._loop = asyncio.get_event_loop()
-        self._tx_lock = asyncio.Lock(loop=self._loop)
-
         self._rx_thread = threading.Thread(target=self._rx_thread_fn,
                                            daemon=True)
         self._rx_thread.start()
 
-    def close(self):
-        self._open = False
-        self._serial.cancel_read()
-        self._serial.close()
-        self._rx_thread.join()
+    async def close(self):
+        async with self._tx_lock():
+            self._closing = True
+            self._open = False
+            await self._loop.run_in_executor(None, self._rx_thread.join())
+            await self._rx_q.join()
+            self._serial.cancel_read()
+            self._serial.close()
+            self._closing = False
 
     async def send(self, pkt: Packet) -> None:
+        if not self._open:
+            raise OSError(errno.ENODEV)
         async with self._tx_lock:
             ind : int = UART.IND_NONE
             if isinstance(pkt, HCIACLData):
@@ -90,13 +100,15 @@ class UART(HCITransport):
                 #assert(written == 1)
             except serial.SerialException as e:
                 log.error(f'rx exception: {e}')
-                raise e
+                raise OSError(e.errno, e.strerror) from None
 
     async def recv(self, timeout: int = 0) -> Optional[Packet]:
+        if not self._open:
+            raise OSError(errno.ENODEV)
         return await self._rx_q.get()
 
     def _rx_enq(self, pkt: Packet) -> None:
-        log.debug(f'pkt: {pkt}')
+        log.debug(f'enq pkt: {pkt}')
         self._rx_q.put_nowait(pkt)
 
     def _rx(self, data: bytes) -> None:
@@ -130,7 +142,6 @@ class UART(HCITransport):
                     self._rx_pkt = HCIEvt()
                     self._rx_remain = self._rx_pkt.header_len()
                 else:
-                    self.close()
                     raise RuntimeError(f'Unexpected or invalid indicator {ind}')
             elif not self._rx_hdr:
                 # Header complete, parse it
@@ -158,8 +169,10 @@ class UART(HCITransport):
                 self._rx(data)
             except Exception as e:
                 log.error(f'rx exception: {e}')
-                raise
                 break
 
+        self._open = False
+        # The public RX path is now disabled
+        self._rx_enq(None)
         log.debug(f'rx thread exited: {id}')
 

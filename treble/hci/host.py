@@ -52,15 +52,23 @@ class HCIHost:
         self._tx_cmd_sem = BoundedSemaphore(value=1)
         self._curr_cmd = None
 
+    async def close():
+        await self._rx_task
+        await self._tx_cmd_task
+
     async def _rx_task(self):
         log.debug('rx task started')
         while True:
             try:
                 pkt = await self._transport.recv()
             except Exception as e:
-                raise
+                log.debug(f'_rx_task: {e}')
             else:
-                if self._mon:
+                if not pkt:
+                    # Broken RX Path
+                    log.debug('_rx_task exiting')
+                    break
+                elif self._mon:
                     self._mon.feed_rx(pkt)
 
             if isinstance(pkt, HCIEvt):
@@ -93,7 +101,8 @@ class HCIHost:
             try:
                 await wait_for(self._tx_cmd_sem.acquire(), 10)
             except TimeoutError:
-                raise
+                log.debug('_tx_cmd_task: sem timeout: exiting')
+                return
 
             assert self._curr_cmd == None
             self._curr_cmd = pkt
@@ -101,8 +110,9 @@ class HCIHost:
 
             try:
                 await self._transport.send(pkt)
-            except Exception as e:
-                raise
+            except OSError as e:
+                log.debug('_tx_cmd_task: send error: exiting')
+                return
             else:
                 if self._mon:
                     self._mon.feed_tx(pkt)

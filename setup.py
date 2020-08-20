@@ -21,8 +21,8 @@ setuptools.setup(
     # http://docutils.sourceforge.net/FAQ.html#what-s-the-official-mime-type-for-restructuredtext-data
     long_description_content_type="text/x-rst",
     url='https://github.com/carlescufi/treble',
-    packages=setuptools.find_namespace_packages(where='.'),
-    #package_dir={'': '.'},
+    packages=setuptools.find_packages(where='.'),
+    #package_dir={'': 'treble'},
     include_package_data=True,
     classifiers=[
         'Programming Language :: Python :: 3',
@@ -32,11 +32,11 @@ setuptools.setup(
         'Operating System :: Microsoft :: Windows',
     ],
     install_requires=[
-        'colorama',
+        'typing-extensions;python_version<"3.8"',
+        'pyserial',
         'prompt_toolkit',
-        'setuptools>=v40.1.0',  # for find_namespace_packages
     ],
 
     entry_points={'console_scripts': ('treble = treble.cli:main',)},
-    python_requires='>=3.4',
+    python_requires='>=3.7',
 )

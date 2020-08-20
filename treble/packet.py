@@ -18,13 +18,14 @@ class Packet:
             self.data = bytearray()
         self.idx = 0
 
-    def unpack(self, cls : Type[NamedTuple]) -> NamedTuple:
+    def unpack(self, cls : type) -> object:
         assert cls.sig
         s = struct.calcsize(cls.sig)
         t = struct.unpack(cls.sig, self.data[self.idx : self.idx + s])
+        self.idx += s
         return cls(*t)
 
-    def pack(self, tup : NamedTuple) -> None:
+    def pack(self, tup : object) -> None:
         self.data[:0] = struct.pack(tup.sig, *astuple(tup))
 
     def header_len(self):
@@ -94,6 +95,19 @@ class HCICmd(Packet):
         self.hdr = HCICmdHdr(self.opcode, plen)
         self.pack(self.hdr)
         self.event = Event()
+
+    def header_len(self):
+        return struct.calcsize(HCICmdHdr.sig)
+
+    def unpack_header(self):
+        self.hdr = self.unpack(HCICmdHdr)
+
+    def payload_len(self):
+        return self.hdr.plen
+
+    def unpack_header(self):
+        self.hdr = self.unpack(HCICmdHdr)
+
 
     @property
     def event(self):

@@ -5,6 +5,7 @@
 
 import logging
 from .packet import HCICmd, HCIEvt, HCIACLData
+from . import hci
 
 log = logging.getLogger('treble.mon')
 
@@ -23,6 +24,7 @@ class Monitor:
         self._feed(TX, pkt)
 
     def _feed(self, dir: str, pkt):
+        self.record = f'{dir} '
         if isinstance(pkt, bytes) or isinstance(pkt, bytearray):
             raise NotImplementedError
         elif dir == TX and isinstance(pkt, HCICmd):
@@ -36,6 +38,8 @@ class Monitor:
 
     def _cmd(self, pkt: bytearray):
         pass
+        #hci.cmd.
+
 
     def _evt(self, pkt: bytearray):
         pass

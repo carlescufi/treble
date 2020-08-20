@@ -6,6 +6,10 @@
 from dataclasses import dataclass
 import enum
 import typing
+try:
+    from typing import Protocol
+except ImportError:
+    from typing_extensions import Protocol
 
 cmds = dict()
 def cmd(ogf):

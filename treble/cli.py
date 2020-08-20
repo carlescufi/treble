@@ -60,7 +60,7 @@ def init_logging():
     logging.getLogger("treble.controller").setLevel(logging.INFO)
     logging.getLogger("treble.hci").setLevel(logging.INFO)
     logging.getLogger("treble.hci.transport").setLevel(logging.INFO)
-    logging.getLogger("treble.hci.transport.uart").setLevel(logging.INFO)
+    logging.getLogger("treble.hci.transport.uart").setLevel(logging.DEBUG)
  
 
 async def init():

@@ -59,7 +59,7 @@ class UART(HCITransport):
         try:
             self._serial = serial.Serial(dev, **kwargs)
         except serial.SerialException as e:
-            raise OSError(e.errno, e.strerror) from None
+            raise OSError(*e.args) from None
         # Force a baudrate change, some onboard debuggers require seeing a
         # baudrate change in order to start hardware flow control
         self._serial.baudrate = self._baudrate

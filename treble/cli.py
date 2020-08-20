@@ -71,10 +71,10 @@ async def init():
     log.debug('init')
     try:
         ctlr = Controller('uart', '/dev/ttyACM0',  baudrate=1000000)
+        await ctlr.open()
     except OSError as e:
         die(e)
 
-    await ctlr.open()
     #pkt = HCICmd(hci.cmd.Reset)
     #pkt = treble.packet.HCICmd()
     #for i in range(5):

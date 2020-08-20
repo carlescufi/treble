@@ -4,6 +4,7 @@ from asyncio import create_task, Queue, Event, BoundedSemaphore, wait_for, \
 import inspect
 import logging
 
+from . import cmd
 from . import evt
 from ..packet import *
 from ..mon import Monitor
@@ -42,7 +43,7 @@ class HCIHost:
         # Bound to max 1, so we send only one command at a time
         self._tx_cmd_sem = BoundedSemaphore(value=1)
 
-    def open(self):
+    async def open(self):
         try:
             self._transport.open(self._dev, **self._kwargs)
         except OSError as e:
@@ -55,10 +56,21 @@ class HCIHost:
         self._curr_cmd = None
         self._tx_cmd_task = create_task(self._tx_cmd_task())
 
+        await self.init()
+
     async def close(self):
         await self._rx_task
         await self._tx_cmd_task
         self._transport.close()
+
+    async def init(self):
+        # Reset the controller first
+        log.debug('init: Reset')
+        pkt = HCICmd(cmd.Reset)
+        await self.send_cmd(pkt)
+        log.debug('init: ReadLocalVersionInformation')
+        pkt = HCICmd(cmd.ReadLocalVersionInformation)
+        await self.send_cmd(pkt)
 
     async def _rx_task(self):
         log.debug('rx task started')

@@ -9,7 +9,7 @@ from typing import Optional
 from .transport import HCITransport, HCI_TRANSPORT_UART
 from ...packet import Packet, HCIACLData, HCICmd, HCIEvt
 
-log = logging.getLogger('treble.transport.uart')
+log = logging.getLogger('treble.hci.transport.uart')
 
 class UART(HCITransport):
 
@@ -51,7 +51,7 @@ class UART(HCITransport):
         kwargs['write_timeout'] = None
         # Force baudrate to a slow, unusable one initially
         kwargs['baudrate'] = UART.INIT_BAUDRATE
-        log.info(f'opening serial port device {dev} at {self._baudrate} baud')
+        log.info(f'opening serial port device {dev} at {self._baudrate:,} baud')
         try:
             self._serial = serial.Serial(dev, **kwargs)
         except serial.SerialException as e:
@@ -105,7 +105,9 @@ class UART(HCITransport):
     async def recv(self, timeout: int = 0) -> Optional[Packet]:
         if not self._open:
             raise OSError(errno.ENODEV)
-        return await self._rx_q.get()
+        pkt = await self._rx_q.get()
+        self._rx_q.task_done()
+        return pkt
 
     def _rx_enq(self, pkt: Packet) -> None:
         log.debug(f'enq pkt: {pkt}')

@@ -91,7 +91,7 @@ class HCIHost:
                     log.debug('_rx_task exiting')
                     break
                 elif self._mon:
-                    self._mon.feed_rx(pkt)
+                    self._mon.feed_rx(0, pkt)
 
             if isinstance(pkt, HCIEvt):
                 self._rx_evt(pkt)
@@ -137,7 +137,7 @@ class HCIHost:
                 return
             else:
                 if self._mon:
-                    self._mon.feed_tx(pkt)
+                    self._mon.feed_tx(0, pkt)
 
     def tx_cmd(self, pkt: HCICmd) -> None:
         self._tx_cmd_q.put_nowait(pkt)

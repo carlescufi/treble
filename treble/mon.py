@@ -3,30 +3,42 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import inspect
 import logging
-from .packet import HCIACLData
+import textwrap
+
+from . import hci
 from .hci.cmd import HCICmd
 from .hci.evt import HCIEvt
-from . import hci
+from .packet import HCIACLData
+from .util import timestamp
 
 log = logging.getLogger('treble.mon')
 
+LINEW = 120
 TX = '<'
 RX = '>'
+DIR_LEN = len('{dir} '.format(dir=TX))
+CMD_FMT = 'HCI Command: {cmd} (0x{ocf:02x}|0x{ogf:04x})'
+CMD_FMT_LEN = len(CMD_FMT.format(cmd='', ocf=1, ogf=1))
+EVT_FMT = 'HCI Event: {evt} (0x{code:02x})'
+EVT_FMT_LEN = len(EVT_FMT.format(evt='', code=1))
+POSTFIX_FMT = '#{count} [tre{cidx}] {timestamp()}'
 
 class Monitor:
 
     def __init__(self):
-       pass
+        self.counts = {}
 
-    def feed_rx(self, pkt):
-        self._feed(RX, pkt)
+    def feed_rx(self, cidx, pkt):
+        self._feed(RX, cidx, pkt)
 
-    def feed_tx(self, pkt):
-        self._feed(TX, pkt)
+    def feed_tx(self, cidx, pkt):
+        self._feed(TX, cidx, pkt)
 
-    def _feed(self, dir: str, pkt):
-        self.record = f'{dir} '
+    def _feed(self, dir: str, cidx: int, pkt):
+        print(pkt)
+        print(type(pkt))
         if isinstance(pkt, bytes) or isinstance(pkt, bytearray):
             raise NotImplementedError
         elif dir == TX and isinstance(pkt, HCICmd):
@@ -38,15 +50,16 @@ class Monitor:
         else:
             raise NotImplementedError
 
-    def _cmd(self, pkt: bytearray):
-        pass
-        #hci.cmd.
-
-
-    def _evt(self, pkt: bytearray):
+    def _cmd(self, data: bytes):
+        #cmd = HCICmd(data)
+        #cmd.unpack_header()
         pass
 
-    def _acl(self, dir: str, pkt: bytearray):
+    def _evt(self, pkt: bytes):
         pass
 
+    def _acl(self, dir: str, pkt: bytes):
+        pass
 
+    def _get_name(self, cls):
+        return inspect.getdoc(cls)

@@ -4,10 +4,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from asyncio import Event
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import enum
 import struct
-import typing
+from typing import Any
 try:
     from typing import Protocol
 except ImportError:
@@ -76,22 +76,32 @@ class OGF(enum.Enum):
     TESTING_CMDS = 6
     LE_CTLR_CMDS = 8
 
+def f(d: Any = None, c: str = None):
+    m = dict()
+    if d:
+        m['default'] = d
+    if c:
+        m['metadata'] = {'doc' : c}
+    return field(**m)
+
 @cmd(OGF.CTLR_BB)
 class Reset:
+    '''Reset'''
     ocf = 0x003
 
 @cmd(OGF.INFO_PARAMS)
 class ReadLocalVersionInformation:
+    '''Read Local Version Information'''
     ocf = 0x001
     @dataclass
     class ReturnParams:
         sig = '<BBHBHH'
-        status: int
-        hci_ver: int
-        hci_rev: int
-        lmp_pal_ver: int
-        manu_name: int
-        lmp_pal_subver: int
+        status: int = f(c='Status')
+        hci_ver: int = f(c='HCI Version')
+        hci_rev: int = f(c='HCI Revision')
+        lmp_pal_ver: int = f(c='LMP PAL Version')
+        manu_name: int = f(c='Manufacturer Name')
+        lmp_pal_subver: int = f(c='LMP PAL Subversion')
 
 @cmd(OGF.INFO_PARAMS)
 class ReadLocalSupportedCommands:

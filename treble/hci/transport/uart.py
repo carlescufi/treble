@@ -11,7 +11,9 @@ import threading
 from typing import Optional
 
 from .transport import HCITransport, HCI_TRANSPORT_UART
-from ...packet import Packet, HCIACLData, HCICmd, HCIEvt
+from ...packet import Packet, HCIACLData
+from ..cmd import HCICmd
+from ..evt import HCIEvt
 
 log = logging.getLogger('treble.hci.transport.uart')
 

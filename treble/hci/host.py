@@ -9,7 +9,9 @@ import inspect
 import logging
 
 from . import cmd
+from .cmd import HCICmd
 from . import evt
+from .evt import HCIEvt
 from ..packet import *
 from ..mon import Monitor
 from .transport.transport import HCITransport, HCI_TRANSPORT_UART

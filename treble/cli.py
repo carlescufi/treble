@@ -16,7 +16,7 @@ from treble import hci
 #from treble.packet import HCICmd
 
 from treble.controller import Controller
-from treble.packet import HCICmd
+from treble.hci.cmd import HCICmd
 
 from prompt_toolkit.patch_stdout import patch_stdout
 from prompt_toolkit.shortcuts import PromptSession

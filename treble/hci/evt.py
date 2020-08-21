@@ -22,14 +22,8 @@ class HCIEvtHdr:
 
 class HCIEvt(Packet):
 
-    def __init__(self, data : bytes = None):
-        super().__init__(data)
-
-    def header_len(self):
-        return struct.calcsize(HCIEvtHdr.sig)
-
-    def unpack_header(self):
-        self.hdr = self.unpack(HCIEvtHdr)
+    def __init__(self, **kwargs):
+        super().__init__(hdr_cls = HCIEvtHdr, **kwargs)
 
     def payload_len(self):
         return self.hdr.plen

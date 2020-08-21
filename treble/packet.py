@@ -3,20 +3,21 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from asyncio import Event
 from dataclasses import dataclass, astuple
 import struct
 import typing
-from typing import Type, NamedTuple
+from typing import Any, Optional
 
 class Packet:
 
-    def __init__(self, data : bytes = None, copy=False):
+    def __init__(self, hdr_cls: Optional[type] = None,
+                 data: Optional[bytes] = None, copy: bool = False):
         if data:
             self.data = bytearray(data) if copy else data
         else:
             self.data = bytearray()
         self.idx = 0
+        self.hdr_cls = hdr_cls
 
     def unpack(self, cls : type) -> object:
         assert cls.sig
@@ -25,18 +26,17 @@ class Packet:
         self.idx += s
         return cls(*t)
 
-    def pack(self, tup : object) -> None:
-        self.data[:0] = struct.pack(tup.sig, *astuple(tup))
+    def pack(self, obj: Any) -> None:
+        self.data[:0] = struct.pack(obj.sig, *astuple(obj))
 
-    def header_len(self):
+    def header_len(self) -> int:
+        return struct.calcsize(self.hdr_cls.sig)
+
+    def payload_len(self) -> int:
         raise NotImplementedError
 
-    def unpack_header(self):
-        raise NotImplementedError
-
-    def payload_len(self):
-        raise NotImplementedError
-
+    def unpack_header(self) -> None:
+        self.hdr = self.unpack(self.hdr_cls)
 
 
 @dataclass

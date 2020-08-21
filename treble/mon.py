@@ -4,7 +4,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-from .packet import HCICmd, HCIEvt, HCIACLData
+from .packet import HCIACLData
+from .hci.cmd import HCICmd
+from .hci.evt import HCIEvt
 from . import hci
 
 log = logging.getLogger('treble.mon')

@@ -3,8 +3,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from asyncio import Event
 from dataclasses import dataclass
 import enum
+import struct
 import typing
 try:
     from typing import Protocol
@@ -31,16 +33,22 @@ class HCICmdHdr:
 
 class HCICmd(Packet):
 
-    def __init__(self, cls):
-        super().__init__()
-        assert cls.ogf <= 0x3F
-        assert cls.ocf <= 0x3FF
-        self.opcode = (cls.ogf << 10) | cls.ocf
-        #plen = struct.calcsize(cls.sig) if cls.sig else 0
-        plen = 0
-        self.hdr = HCICmdHdr(self.opcode, plen)
-        self.pack(self.hdr)
-        self.event = Event()
+    def __init__(self, cmd_cls = None, **kwargs):
+        if cmd_cls:
+            # Downstream command creation
+            assert not kwargs.get('data')
+            assert cmd_cls.ogf <= 0x3F
+            assert cmd_cls.ocf <= 0x3FF
+            super().__init__(**kwargs)
+            self.opcode = (cmd_cls.ogf << 10) | cmd_cls.ocf
+            plen = struct.calcsize(getattr(cmd_cls, 'sig', ''))
+            self.hdr = HCICmdHdr(self.opcode, plen)
+            self.pack(self.hdr)
+            self.event = Event()
+        else:
+            # Upstream command parsing
+            assert kwargs.get('data')
+            super().__init__(hdr_cls = HCICmdHdr, **kwargs)
 
     def header_len(self):
         return struct.calcsize(HCICmdHdr.sig)
@@ -50,10 +58,6 @@ class HCICmd(Packet):
 
     def payload_len(self):
         return self.hdr.plen
-
-    def unpack_header(self):
-        self.hdr = self.unpack(HCICmdHdr)
-
 
     @property
     def event(self):

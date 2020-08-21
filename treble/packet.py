@@ -37,17 +37,7 @@ class Packet:
     def payload_len(self):
         raise NotImplementedError
 
-@dataclass
-class HCICmdHdr:
-    sig = '<HB'
-    opcode : int
-    plen : int
 
-@dataclass
-class HCIEvtHdr:
-    sig = '<BB'
-    code : int
-    plen : int
 
 @dataclass
 class HCIACLHdr:
@@ -69,51 +59,5 @@ class HCIACLData(Packet):
     def payload_len(self):
         return self.hdr.dlen
 
-class HCIEvt(Packet):
 
-    def __init__(self, data : bytes = None):
-        super().__init__(data)
-
-    def header_len(self):
-        return struct.calcsize(HCIEvtHdr.sig)
-
-    def unpack_header(self):
-        self.hdr = self.unpack(HCIEvtHdr)
-
-    def payload_len(self):
-        return self.hdr.plen
-
-class HCICmd(Packet):
-
-    def __init__(self, cls):
-        super().__init__()
-        assert cls.ogf <= 0x3F
-        assert cls.ocf <= 0x3FF
-        self.opcode = (cls.ogf << 10) | cls.ocf
-        #plen = struct.calcsize(cls.sig) if cls.sig else 0
-        plen = 0
-        self.hdr = HCICmdHdr(self.opcode, plen)
-        self.pack(self.hdr)
-        self.event = Event()
-
-    def header_len(self):
-        return struct.calcsize(HCICmdHdr.sig)
-
-    def unpack_header(self):
-        self.hdr = self.unpack(HCICmdHdr)
-
-    def payload_len(self):
-        return self.hdr.plen
-
-    def unpack_header(self):
-        self.hdr = self.unpack(HCICmdHdr)
-
-
-    @property
-    def event(self):
-        return self._event
-
-    @event.setter
-    def event(self, event):
-        self._event = event
 

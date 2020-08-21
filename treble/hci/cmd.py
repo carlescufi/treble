@@ -11,6 +11,8 @@ try:
 except ImportError:
     from typing_extensions import Protocol
 
+from ..packet import Packet
+
 cmds = dict()
 def cmd(ogf):
     def wrapper(cls):
@@ -20,6 +22,46 @@ def cmd(ogf):
         cmds[opcode] = cls
         return cls
     return wrapper
+
+@dataclass
+class HCICmdHdr:
+    sig = '<HB'
+    opcode : int
+    plen : int
+
+class HCICmd(Packet):
+
+    def __init__(self, cls):
+        super().__init__()
+        assert cls.ogf <= 0x3F
+        assert cls.ocf <= 0x3FF
+        self.opcode = (cls.ogf << 10) | cls.ocf
+        #plen = struct.calcsize(cls.sig) if cls.sig else 0
+        plen = 0
+        self.hdr = HCICmdHdr(self.opcode, plen)
+        self.pack(self.hdr)
+        self.event = Event()
+
+    def header_len(self):
+        return struct.calcsize(HCICmdHdr.sig)
+
+    def unpack_header(self):
+        self.hdr = self.unpack(HCICmdHdr)
+
+    def payload_len(self):
+        return self.hdr.plen
+
+    def unpack_header(self):
+        self.hdr = self.unpack(HCICmdHdr)
+
+
+    @property
+    def event(self):
+        return self._event
+
+    @event.setter
+    def event(self, event):
+        self._event = event
 
 class OGF(enum.Enum):
     LINK_CONTROL = 1

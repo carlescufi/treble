@@ -32,5 +32,5 @@ class HCITransport(ABC):
     async def recv(self, timeout: int) -> Optional[bytearray]:
     	'''Receive data, blocking.'''
 
-    def repr():
+    def repr(self):
         return f'{self.__class__}, {self.name}'

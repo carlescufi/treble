@@ -17,6 +17,64 @@ from ..evt import HCIEvt
 
 log = logging.getLogger('treble.hci.transport.uart')
 
+class StreamTransport(HCITransport):
+
+    def __init__(self):
+        super().__init__(HCI_TRANSPORT_UART)
+        # Init RX states
+        self._rx_state = UART.IND_NONE
+        self._rx_pkt = None
+        self._rx_remain = 0
+        self._rx_hdr = False
+
+    def _rx(self, data: bytes) -> Optional[Packet]:
+        log.debug(f'read: {data.hex("-")}')
+        idx : int = 0
+        dlen : int = len(data)
+        while(dlen):
+
+            # copy as much as available
+            if self._rx_remain:
+                clen = min(self._rx_remain, dlen)
+                # Use += to ensure in-place concatenation without creating a
+                # new object  This should be faster than extend()
+                self._rx_pkt.data += data[idx:idx + clen]
+                idx += clen
+                self._rx_remain -= clen
+                dlen -= clen
+                if self._rx_remain:
+                    # More bytes required
+                    return None
+
+            if self._rx_state == UART.IND_NONE:
+                ind = data[0]
+                idx += 1
+                dlen -= 1
+                self._rx_state = ind
+                if ind == UART.IND_ACL:
+                    self._rx_pkt = HCIACLData()
+                    self._rx_remain = self._rx_pkt.header_len()
+                elif ind == UART.IND_EVT:
+                    self._rx_pkt = HCIEvt()
+                    self._rx_remain = self._rx_pkt.header_len()
+                else:
+                    raise RuntimeError(f'Unexpected or invalid indicator {ind}')
+            elif not self._rx_hdr:
+                # Header complete, parse it
+                self._rx_pkt.unpack_header()
+                if self._rx_state == UART.IND_ACL:
+                    self._rx_remain = self._rx_pkt.payload_len()
+                else:
+                    self._rx_remain = self._rx_pkt.payload_len()
+                self._rx_hdr = True
+            else:
+                pkt = self._rx_pkt
+                self._rx_pkt = None
+                self._rx_state = UART.IND_NONE
+                self._rx_hdr = False
+                return pkt
+
+
 class UART(HCITransport):
 
     # Initial baudrate
@@ -66,11 +124,6 @@ class UART(HCITransport):
         # baudrate change in order to start hardware flow control
         self._serial.baudrate = self._baudrate
         self._open = True
-        # Init RX states
-        self._rx_state = UART.IND_NONE
-        self._rx_pkt = None
-        self._rx_remain = 0
-        self._rx_hdr = False
         self._rx_thread = threading.Thread(target=self._rx_thread_fn,
                                            daemon=True)
         self._rx_thread.start()
@@ -119,53 +172,6 @@ class UART(HCITransport):
         log.debug(f'enq pkt: {pkt}')
         self._rx_q.put_nowait(pkt)
 
-    def _rx(self, data: bytes) -> None:
-        log.debug(f'read: {data.hex("-")}')
-        idx : int = 0
-        dlen : int = len(data)
-        while(dlen):
-
-            # copy as much as available
-            if self._rx_remain:
-                clen = min(self._rx_remain, dlen)
-                # Use += to ensure in-place concatenation without creating a
-                # new object  This should be faster than extend()
-                self._rx_pkt.data += data[idx:idx + clen]
-                idx += clen
-                self._rx_remain -= clen
-                dlen -= clen
-                if self._rx_remain:
-                    # More bytes required
-                    return
-
-            if self._rx_state == UART.IND_NONE:
-                ind = data[0]
-                idx += 1
-                dlen -= 1
-                self._rx_state = ind
-                if ind == UART.IND_ACL:
-                    self._rx_pkt = HCIACLData()
-                    self._rx_remain = self._rx_pkt.header_len()
-                elif ind == UART.IND_EVT:
-                    self._rx_pkt = HCIEvt()
-                    self._rx_remain = self._rx_pkt.header_len()
-                else:
-                    raise RuntimeError(f'Unexpected or invalid indicator {ind}')
-            elif not self._rx_hdr:
-                # Header complete, parse it
-                self._rx_pkt.unpack_header()
-                if self._rx_state == UART.IND_ACL:
-                    self._rx_remain = self._rx_pkt.payload_len()
-                else:
-                    self._rx_remain = self._rx_pkt.payload_len()
-                self._rx_hdr = True
-            else:
-                # Packet completed, dispatch it
-                self._loop.call_soon_threadsafe(self._rx_enq, self._rx_pkt)
-                self._rx_pkt = None
-                self._rx_state = UART.IND_NONE
-                self._rx_hdr = False
-
     def _rx_thread_fn(self) -> None:
         id = threading.current_thread()
         log.debug(f'rx thread started: {id}')
@@ -174,7 +180,10 @@ class UART(HCITransport):
         while self._open and self._serial.is_open:
             try:
                 data = self._serial.read(max(1, self._serial.in_waiting))
-                self._rx(data)
+                pkt = self._rx(data)
+                if pkt:
+                    # Packet completed, dispatch it
+                    self._loop.call_soon_threadsafe(self._rx_enq, pkt)
             except Exception as e:
                 log.error(f'rx exception: {e}')
                 break

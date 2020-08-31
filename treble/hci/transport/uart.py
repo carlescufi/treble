@@ -19,8 +19,8 @@ log = logging.getLogger('treble.hci.transport.uart')
 
 class StreamTransport(HCITransport):
 
-    def __init__(self):
-        super().__init__(HCI_TRANSPORT_UART)
+    def __init__(self, name: str):
+        super().__init__(name)
         # Init RX states
         self._rx_state = UART.IND_NONE
         self._rx_pkt = None
@@ -75,7 +75,7 @@ class StreamTransport(HCITransport):
                 return pkt
 
 
-class UART(HCITransport):
+class UART(StreamTransport):
 
     # Initial baudrate
     INIT_BAUDRATE = 9600

@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 HCI_TRANSPORT_UART = 'uart'
+HCI_TRANSPORT_UART_TCP = 'uart-tcp'
 
 class HCITransport(ABC):
     '''Abstract superclass for an HCI transport.'''

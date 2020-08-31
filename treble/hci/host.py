@@ -14,8 +14,9 @@ from . import evt
 from .evt import HCIEvt
 from ..packet import *
 from ..mon import Monitor
-from .transport.transport import HCITransport, HCI_TRANSPORT_UART
-from .transport.uart import UART
+from .transport.transport import HCITransport, HCI_TRANSPORT_UART, \
+                                 HCI_TRANSPORT_TCP
+from .transport.uart import UART, UARToTCP
 
 log = logging.getLogger('treble.hci')
 
@@ -43,6 +44,8 @@ class HCIHost:
         self._mon = mon
         if (name == HCI_TRANSPORT_UART):
             self._transport = UART()
+        elif (name == HCI_TRANSPORT_TCP):
+            self._transport = UARToTCP()
         else:
             raise RuntimeError('Unknown transport type {}'.name)
         self._tx_cmd_q = Queue()
@@ -51,7 +54,7 @@ class HCIHost:
 
     async def open(self):
         try:
-            self._transport.open(self._dev, **self._kwargs)
+            await self._transport.open(self._dev, **self._kwargs)
         except OSError as e:
             #log.error(f'Unable to open serial port {e}')
             raise e from None

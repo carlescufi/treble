@@ -10,7 +10,7 @@ import serial
 import threading
 from typing import Optional
 
-from .transport import HCITransport, HCI_TRANSPORT_UART
+from .transport import HCITransport, HCI_TRANSPORT_UART, HCI_TRANSPORT_TCP
 from ...packet import Packet, HCIACLData
 from ..cmd import HCICmd
 from ..evt import HCIEvt
@@ -29,10 +29,21 @@ class StreamTransport(HCITransport):
     def __init__(self, name: str):
         super().__init__(name)
         # Init RX states
-        self._rx_state = UART.IND_NONE
+        self._rx_state = StreamTransport.IND_NONE
         self._rx_pkt = None
         self._rx_remain = 0
         self._rx_hdr = False
+
+    def _prepend_ind(self, pkt: Packet) -> bytes:
+        ind : int = StreamTransport.IND_NONE
+        if isinstance(pkt, HCIACLData):
+            ind = StreamTransport.IND_ACL
+        elif isinstance(pkt, HCICmd):
+            ind = StreamTransport.IND_CMD
+        else:
+            raise RuntimeException('invalid packet type')
+
+        return bytes([ind]) + pkt.data
 
     def _rx(self, data: bytes) -> Optional[Packet]:
         log.debug(f'read: {data.hex("-")}')
@@ -53,15 +64,15 @@ class StreamTransport(HCITransport):
                     # More bytes required
                     return None
 
-            if self._rx_state == UART.IND_NONE:
+            if self._rx_state == StreamTransport.IND_NONE:
                 ind = data[0]
                 idx += 1
                 dlen -= 1
                 self._rx_state = ind
-                if ind == UART.IND_ACL:
+                if ind == StreamTransport.IND_ACL:
                     self._rx_pkt = HCIACLData()
                     self._rx_remain = self._rx_pkt.header_len()
-                elif ind == UART.IND_EVT:
+                elif ind == StreamTransport.IND_EVT:
                     self._rx_pkt = HCIEvt()
                     self._rx_remain = self._rx_pkt.header_len()
                 else:
@@ -69,7 +80,7 @@ class StreamTransport(HCITransport):
             elif not self._rx_hdr:
                 # Header complete, parse it
                 self._rx_pkt.unpack_header()
-                if self._rx_state == UART.IND_ACL:
+                if self._rx_state == StreamTransport.IND_ACL:
                     self._rx_remain = self._rx_pkt.payload_len()
                 else:
                     self._rx_remain = self._rx_pkt.payload_len()
@@ -77,12 +88,72 @@ class StreamTransport(HCITransport):
             else:
                 pkt = self._rx_pkt
                 self._rx_pkt = None
-                self._rx_state = UART.IND_NONE
+                self._rx_state = StreamTransport.IND_NONE
                 self._rx_hdr = False
                 return pkt
 
+class TCPProtocol(asyncio.Protocol):
+    def __init__(self, hci_transport):
+        self._hci_transport = hci_transport
+
+    def connection_made(self, transport):
+        self._transport = transport
+
+    def data_received(self, data):
+        pkt = self._hci_transport._rx(data)
+        if pkt:
+            self._hci_transport._rx_q.put_nowait(pkt)
+
+    def connection_lost(self, exc):
+        pass
+    
 class UARToTCP(StreamTransport):
-    pass
+    def __init__(self):
+        super().__init__(HCI_TRANSPORT_TCP)
+        self._open = False
+        self._closing = False
+        self._rx_q = asyncio.Queue()
+        self._loop = asyncio.get_event_loop()
+        self._tx_lock = asyncio.Lock(loop=self._loop)
+
+    async def open(self, dev : str, **kwargs) -> None:
+        if self._open or self._closing:
+            raise OSError(errno.EEXIST)
+
+        host, _, port = dev.partition(':')
+        port = int(port)
+        self._transport, self._protocol = await self._loop.create_connection(
+                        lambda: TCPProtocol(self), host, port) 
+        self._open = True
+
+    async def close(self):
+        async with self._tx_lock():
+            self._closing = True
+            self._open = False
+            await self._rx_q.join()
+            self._transport.close()
+            #await self._close_future
+            self._closing = False
+
+    async def send(self, pkt: Packet) -> None:
+        if not self._open:
+            raise OSError(errno.ENODEV)
+        async with self._tx_lock:
+            txd = self._prepend_ind(pkt)
+            log.debug(f'writing {txd.hex("-")}')
+            try:
+                self._transport.write(txd)
+            except OSError as e:
+                log.error(f'rx exception: {e}')
+                raise OSError(e.errno, e.strerror) from None
+
+    async def recv(self, timeout: int = 0) -> Optional[Packet]:
+        if not self._open:
+            raise OSError(errno.ENODEV)
+        pkt = await self._rx_q.get()
+        self._rx_q.task_done()
+        return pkt
+
 
 class UART(StreamTransport):
 
@@ -97,7 +168,7 @@ class UART(StreamTransport):
         self._loop = asyncio.get_event_loop()
         self._tx_lock = asyncio.Lock(loop=self._loop)
 
-    def open(self, dev : str, **kwargs) -> None:
+    async def open(self, dev : str, **kwargs) -> None:
         if self._open or self._closing:
             raise OSError(errno.EEXIST)
 
@@ -144,15 +215,7 @@ class UART(StreamTransport):
         if not self._open:
             raise OSError(errno.ENODEV)
         async with self._tx_lock:
-            ind : int = UART.IND_NONE
-            if isinstance(pkt, HCIACLData):
-                ind = UART.IND_ACL
-            elif isinstance(pkt, HCICmd):
-                ind = UART.IND_CMD
-            else:
-                raise RuntimeException('invalid packet type')
-
-            txd = bytes([ind]) + pkt.data
+            txd = self._prepend_ind(pkt)
             log.debug(f'writing {txd.hex("-")}')
             try:
                 written = await self._loop.run_in_executor(None,

@@ -70,7 +70,8 @@ async def init():
     init_logging()
     log.debug('init')
     try:
-        ctlr = Controller('uart', '/dev/ttyACM0',  baudrate=1000000)
+        #ctlr = Controller('uart', '/dev/ttyACM0',  baudrate=1000000)
+        ctlr = Controller('tcp', '192.168.140.40:4161')
         await ctlr.open()
     except OSError as e:
         die(str(e))

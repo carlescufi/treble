@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 HCI_TRANSPORT_UART = 'uart'
-HCI_TRANSPORT_UART_TCP = 'uart-tcp'
+HCI_TRANSPORT_TCP = 'tcp'
 
 class HCITransport(ABC):
     '''Abstract superclass for an HCI transport.'''
@@ -18,7 +18,7 @@ class HCITransport(ABC):
         self.name = name
 
     @abstractmethod
-    def open(self, dev: str, **kwargs) -> None:
+    async def open(self, dev: str, **kwargs) -> None:
     	'''Open transport.'''
 
     @abstractmethod

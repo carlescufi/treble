@@ -37,8 +37,8 @@ class Monitor:
         self._feed(TX, cidx, pkt)
 
     def _feed(self, dir: str, cidx: int, pkt):
-        print(pkt)
-        print(type(pkt))
+        #print(pkt)
+        #print(type(pkt))
         if isinstance(pkt, bytes) or isinstance(pkt, bytearray):
             raise NotImplementedError
         elif dir == TX and isinstance(pkt, HCICmd):

@@ -3,6 +3,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import argparse
 import asyncio
 import logging
 import os
@@ -65,13 +66,21 @@ def init_logging():
 
 async def init():
 
+    parser = argparse.ArgumentParser(description='treble command-line interface.')
+    parser.add_argument('-t','--transport',
+                        choices=['uart', 'tcp'], required=True,
+                        help='select transport')
+    args = parser.parse_args()
+
     print(f'treble {__version__} (pid {os.getpid()}) -- BLE Host. Type \'q\' '
           f'to quit.\n')
     init_logging()
     log.debug('init')
     try:
-        #ctlr = Controller('uart', '/dev/ttyACM0',  baudrate=1000000)
-        ctlr = Controller('tcp', '192.168.140.40:4161')
+        if args.transport == 'uart':
+            ctlr = Controller('uart', '/dev/ttyACM0',  baudrate=1000000)
+        else:
+            ctlr = Controller('tcp', '192.168.1.40:4161')
         await ctlr.open()
     except OSError as e:
         die(str(e))
@@ -83,8 +92,6 @@ async def init():
     #    #ctlr._hci.tx_cmd(pkt)
     #    await ctlr._hci.send_cmd(pkt)
     #return 0
-
-
 
 async def interactive_shell():
     return

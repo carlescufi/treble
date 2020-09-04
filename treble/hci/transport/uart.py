@@ -122,6 +122,7 @@ class UARToTCP(StreamTransport):
 
         host, _, port = dev.partition(':')
         port = int(port)
+        log.info(f'opening TCP connection to {host}:{port}')
         self._transport, self._protocol = await self._loop.create_connection(
                         lambda: TCPProtocol(self), host, port) 
         self._open = True
@@ -234,7 +235,6 @@ class UART(StreamTransport):
         return pkt
 
     def _rx_enq(self, pkt: Packet) -> None:
-        log.debug(f'enq pkt: {pkt}')
         self._rx_q.put_nowait(pkt)
 
     def _rx_thread_fn(self) -> None:

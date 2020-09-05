@@ -10,10 +10,11 @@ import serial
 import threading
 from typing import Optional
 
-from .transport import HCITransport, HCI_TRANSPORT_UART, HCI_TRANSPORT_TCP
-from ...packet import Packet, HCIACLData
 from ..cmd import HCICmd
 from ..evt import HCIEvt
+from .transport import HCITransport, HCI_TRANSPORT_UART, HCI_TRANSPORT_TCP
+from ...packet import Packet, HCIACLData
+from ...util import hex
 
 log = logging.getLogger('treble.hci.transport.uart')
 
@@ -46,7 +47,7 @@ class StreamTransport(HCITransport):
         return bytes([ind]) + pkt.data
 
     def _rx(self, data: bytes) -> Optional[Packet]:
-        log.debug(f'read: {data.hex("-")}')
+        log.debug(f'read: {hex(data, "-")}')
         idx : int = 0
         dlen : int = len(data)
         while(dlen):
@@ -141,7 +142,7 @@ class UARToTCP(StreamTransport):
             raise OSError(errno.ENODEV)
         async with self._tx_lock:
             txd = self._prepend_ind(pkt)
-            log.debug(f'writing {txd.hex("-")}')
+            log.debug(f'writing {hex(txd, "-")}')
             try:
                 self._transport.write(txd)
             except OSError as e:
@@ -217,7 +218,7 @@ class UART(StreamTransport):
             raise OSError(errno.ENODEV)
         async with self._tx_lock:
             txd = self._prepend_ind(pkt)
-            log.debug(f'writing {txd.hex("-")}')
+            log.debug(f'writing {hex(txd, "-")}')
             try:
                 written = await self._loop.run_in_executor(None,
                                                            self._serial.write,

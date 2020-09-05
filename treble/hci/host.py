@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from asyncio import create_task, Queue, Event, BoundedSemaphore, wait_for, \
-                    TimeoutError
+                    TimeoutError, CancelledError
 import inspect
 import logging
 
@@ -86,6 +86,9 @@ class HCIHost:
         while True:
             try:
                 pkt = await self._transport.recv()
+            except CancelledError:
+                # Here for compatibility with 3.7
+                raise
             except Exception as e:
                 log.debug(f'_rx_task: {e}')
             else:
@@ -125,6 +128,9 @@ class HCIHost:
             # Wait for the current command to complete
             try:
                 await wait_for(self._tx_cmd_sem.acquire(), 10)
+            except CancelledError:
+                # Here for compatibility with 3.7
+                raise
             except TimeoutError:
                 log.debug('_tx_cmd_task: sem timeout: exiting')
                 return
